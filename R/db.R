@@ -18,3 +18,9 @@ read_db_credentials <- function(file = "~/.db_credentials_cci") {
   
   return(creds)
 }
+
+#' @export
+set_db_connection <- function(creds_file = "~/.db_credentials") {
+  creds <- read_db_credentials(creds_file)
+  DBI::dbConnect(RPostgres::Postgres(), host = creds$host, port = as.integer(creds$port), dbname = creds$dbname, user = creds$user, password = creds$password)
+}

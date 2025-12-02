@@ -2,4 +2,5 @@
 
 export(read_db_credentials)
 export(read_file)
+export(set_db_connection)
 export(write_file)
