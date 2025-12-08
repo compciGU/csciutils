@@ -31,6 +31,13 @@ read_file <- function(f, fn = NULL, msg = TRUE, ...) {
           function(path, ...) utils::read.csv(path, stringsAsFactors = FALSE, ...)
         }
       },
+      tsv = {
+      if (dt_avail) {
+        data.table::fwrite(x, file = path, sep = "\t", ...)
+        } else {
+        utils::write.table(x, file = path, sep = "\t", row.names = FALSE, quote = FALSE, ...)
+       }
+      },
       xlsx = {
         if (readxl_avail) {
           function(path, ...) readxl::read_excel(path, ...)
@@ -48,11 +55,13 @@ read_file <- function(f, fn = NULL, msg = TRUE, ...) {
         }
       },
       dta = {
-        if (readstata13_avail) {
+        if (haven_avail) {
+          function(path, ...) haven::read_dta(path, ...)
+        } else if (readstata13_avail) {
           function(path, ...) readstata13::read.dta13(path, ...)
         } else {
-          stop("Reading .dta requires package 'readstata13'.")
-        }
+        stop("Reading .dta requires package 'haven' or 'readstata13'.")
+        }   
       },
       sav = {
         if (haven_avail) {
@@ -97,7 +106,7 @@ write_file <- function(x, path, overwrite = FALSE, msg = TRUE, ...) {
   }
 
   ext <- tolower(tools::file_ext(path))
-  
+
   ## prefer fast writers when available
   dt_avail <- requireNamespace("data.table", quietly = TRUE)
   vroom_avail <- requireNamespace("vroom", quietly = TRUE)
@@ -192,18 +201,15 @@ write_file <- function(x, path, overwrite = FALSE, msg = TRUE, ...) {
 #' }
 #'
 #' @export
-read_survey_data <- function(conn, dataset_tag, use_original = TRUE, msg = TRUE, ...) {
-  if (!requireNamespace("DBI", quietly = TRUE)) {
-    stop("Package 'DBI' is required but not installed.")
-  }
+read_survey_data <- function(conn, dataset_tag, use_original = FALSE, msg = TRUE, ...) {
   
   if (missing(conn) || missing(dataset_tag)) {
     stop("Both 'conn' and 'dataset_tag' are required.")
   }
   
   # Get ROOT_DIR from environment
-  root_dir <- Sys.getenv("ROOT_DIR")
-  if (root_dir == "") {
+  ROOT_DIR <- Sys.getenv("ROOT_DIR")
+  if (ROOT_DIR == "") {
     stop("ROOT_DIR environment variable is not set.")
   }
   
@@ -211,7 +217,7 @@ read_survey_data <- function(conn, dataset_tag, use_original = TRUE, msg = TRUE,
   path_column <- if (use_original) "original_path" else "path"
   
   # Query the datasets table
-  query <- sprintf("SELECT %s FROM datasets WHERE tag = $1", path_column)
+  query <- paste0("SELECT ", path_column, " FROM datasets WHERE tag = $1 LIMIT 1")
   result <- DBI::dbGetQuery(conn, query, params = list(dataset_tag))
   
   if (nrow(result) == 0) {
@@ -226,7 +232,7 @@ read_survey_data <- function(conn, dataset_tag, use_original = TRUE, msg = TRUE,
   }
   
   # Construct the full path
-  full_path <- file.path(root_dir, relative_path)
+  full_path <- file.path(ROOT_DIR, relative_path)
   
   # Use read_file to load the data
   read_file(full_path, msg = msg, ...)
