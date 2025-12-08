@@ -165,3 +165,67 @@ write_file <- function(x, path, overwrite = FALSE, msg = TRUE, ...) {
   if (isTRUE(msg)) message(sprintf("Wrote file %s", path))
   invisible(path)
 }
+
+#' @title Read Survey Data from Database Path
+#'
+#' @description Loads a survey dataset by reading the file path from the datasets table.
+#' The file path is constructed by combining the ROOT_DIR environment variable with 
+#' the path from either the original_path or path column.
+#'
+#' @param conn A DBI database connection object
+#' @param dataset_tag The tag of the dataset to read
+#' @param use_original Logical. If TRUE (default), uses the original_path column. 
+#'   If FALSE, uses the path column.
+#' @param msg Logical. If TRUE, prints a message when reading the file.
+#' @param ... Additional arguments passed to read_file
+#'
+#' @return The loaded dataset (typically a data frame)
+#'
+#' @examples
+#' \dontrun{
+#' conn <- set_db_connection()
+#' data <- read_survey_data(conn, dataset_tag = "survey2024")
+#' data_processed <- read_survey_data(conn, dataset_tag = "survey2024", use_original = FALSE)
+#' DBI::dbDisconnect(conn)
+#' }
+#'
+#' @export
+read_survey_data <- function(conn, dataset_tag, use_original = TRUE, msg = TRUE, ...) {
+  if (!requireNamespace("DBI", quietly = TRUE)) {
+    stop("Package 'DBI' is required but not installed.")
+  }
+  
+  if (missing(conn) || missing(dataset_tag)) {
+    stop("Both 'conn' and 'dataset_tag' are required.")
+  }
+  
+  # Get ROOT_DIR from environment
+  root_dir <- Sys.getenv("ROOT_DIR")
+  if (root_dir == "") {
+    stop("ROOT_DIR environment variable is not set.")
+  }
+  
+  # Determine which column to use
+  path_column <- if (use_original) "original_path" else "path"
+  
+  # Query the datasets table
+  query <- sprintf("SELECT %s FROM datasets WHERE dataset_tag = $1", path_column)
+  result <- DBI::dbGetQuery(conn, query, params = list(dataset_tag))
+  
+  if (nrow(result) == 0) {
+    stop(sprintf("No dataset found with dataset_tag = '%s'", dataset_tag))
+  }
+  
+  # Get the relative path
+  relative_path <- result[[path_column]][1]
+  
+  if (is.na(relative_path) || relative_path == "") {
+    stop(sprintf("The %s column is empty or NA for dataset_tag = '%s'", path_column, dataset_tag))
+  }
+  
+  # Construct the full path
+  full_path <- file.path(root_dir, relative_path)
+  
+  # Use read_file to load the data
+  read_file(full_path, msg = msg, ...)
+}

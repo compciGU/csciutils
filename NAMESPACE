@@ -2,5 +2,6 @@
 
 export(read_db_credentials)
 export(read_file)
+export(read_survey_data)
 export(set_db_connection)
 export(write_file)
