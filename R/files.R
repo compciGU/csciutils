@@ -96,6 +96,8 @@ write_file <- function(x, path, overwrite = FALSE, msg = TRUE, ...) {
     stop(sprintf("File already exists: %s (set overwrite = TRUE to overwrite)", path))
   }
 
+  ext <- tolower(tools::file_ext(path))
+  
   ## prefer fast writers when available
   dt_avail <- requireNamespace("data.table", quietly = TRUE)
   vroom_avail <- requireNamespace("vroom", quietly = TRUE)
@@ -209,7 +211,7 @@ read_survey_data <- function(conn, dataset_tag, use_original = TRUE, msg = TRUE,
   path_column <- if (use_original) "original_path" else "path"
   
   # Query the datasets table
-  query <- sprintf("SELECT %s FROM datasets WHERE dataset_tag = $1", path_column)
+  query <- sprintf("SELECT %s FROM datasets WHERE tag = $1", path_column)
   result <- DBI::dbGetQuery(conn, query, params = list(dataset_tag))
   
   if (nrow(result) == 0) {
