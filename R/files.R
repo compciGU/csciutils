@@ -229,3 +229,56 @@ read_survey_data <- function(conn, dataset_tag, use_original = TRUE, msg = TRUE,
   # Use read_file to load the data
   read_file(full_path, msg = msg, ...)
 }
+
+#' @title Clean Variable Names in a Dataset
+#'
+#' @description Converts all variable names in a dataset to a clean format by:
+#' - Converting to lowercase
+#' - Replacing spaces and dots with underscores
+#' - Removing special characters (keeping only letters, numbers, and underscores)
+#'
+#' @param data A data frame whose variable names should be cleaned
+#'
+#' @return A data frame with cleaned variable names
+#'
+#' @examples
+#' \dontrun{
+#' df <- data.frame("First Name" = 1:3, "Last.Name" = letters[1:3], 
+#'                  "Age (years)" = c(25, 30, 35))
+#' clean_df <- clean_varnames(df)
+#' names(clean_df)  # "first_name" "last_name" "age_years"
+#' }
+#'
+#' @export
+clean_varnames <- function(data) {
+  if (!is.data.frame(data)) {
+    stop("Input must be a data frame.")
+  }
+  
+  # Get current names
+  old_names <- names(data)
+  
+  # Clean names
+  new_names <- old_names
+  new_names <- tolower(new_names)                           # Convert to lowercase
+  new_names <- gsub("[ .]", "_", new_names)                 # Replace spaces and dots with underscores
+  new_names <- gsub("[^a-z0-9_]", "", new_names)            # Remove special characters (keep letters, numbers, underscores)
+  new_names <- gsub("_+", "_", new_names)                   # Replace multiple underscores with single underscore
+  new_names <- gsub("^_|_$", "", new_names)                 # Remove leading/trailing underscores
+  
+  # Handle empty names or duplicates
+  if (any(new_names == "")) {
+    empty_idx <- which(new_names == "")
+    new_names[empty_idx] <- paste0("var_", empty_idx)
+  }
+  
+  # Handle duplicate names
+  if (any(duplicated(new_names))) {
+    new_names <- make.unique(new_names, sep = "_")
+  }
+  
+  # Assign cleaned names
+  names(data) <- new_names
+  
+  return(data)
+}

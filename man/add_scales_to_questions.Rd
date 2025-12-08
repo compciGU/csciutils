@@ -25,5 +25,4 @@ conn <- connect_db()
 questions_scales <- add_scales_to_questions(conn)
 DBI::dbDisconnect(conn)
 }
-#' @export
 }

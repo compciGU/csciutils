@@ -43,7 +43,7 @@ set_db_connection <- function(creds_file = "~/.db_credentials_cci") {
 #' questions_scales <- add_scales_to_questions(conn)
 #' DBI::dbDisconnect(conn)
 #' }
-#' #' @export
+#' @export
 add_scales_to_questions <- function(conn, inner_join = FALSE) {
   if (!requireNamespace("DBI", quietly = TRUE)) {
     stop("Package 'DBI' is required but not installed.")
