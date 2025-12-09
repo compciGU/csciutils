@@ -20,7 +20,7 @@ Converts all variable names in a dataset to a clean format by:
 }
 \examples{
 \dontrun{
-df <- data.frame("First Name" = 1:3, "Last.Name" = letters[1:3], 
+df <- data.frame("First Name" = 1:3, "Last.Name" = letters[1:3],
                  "Age (years)" = c(25, 30, 35))
 clean_df <- clean_varnames(df)
 names(clean_df)  # "first_name" "last_name" "age_years"

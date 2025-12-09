@@ -4,14 +4,14 @@
 \alias{read_survey_data}
 \title{Read Survey Data from Database Path}
 \usage{
-read_survey_data(conn, dataset_tag, use_original = TRUE, msg = TRUE, ...)
+read_survey_data(conn, dataset_tag, use_original = FALSE, msg = TRUE, ...)
 }
 \arguments{
 \item{conn}{A DBI database connection object}
 
 \item{dataset_tag}{The tag of the dataset to read}
 
-\item{use_original}{Logical. If TRUE (default), uses the original_path column. 
+\item{use_original}{Logical. If TRUE (default), uses the original_path column.
 If FALSE, uses the path column.}
 
 \item{msg}{Logical. If TRUE, prints a message when reading the file.}
@@ -23,7 +23,7 @@ The loaded dataset (typically a data frame)
 }
 \description{
 Loads a survey dataset by reading the file path from the datasets table.
-The file path is constructed by combining the ROOT_DIR environment variable with 
+The file path is constructed by combining the ROOT_DIR environment variable with
 the path from either the original_path or path column.
 }
 \examples{
