@@ -292,7 +292,7 @@ clean_varnames <- function(data) {
 }
 
 
-#' export
+#' @export
 remove_all_labels <- function(data) {
   attr(data, "variable.labels") <- NULL
 
