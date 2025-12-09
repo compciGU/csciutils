@@ -10,7 +10,7 @@ read_file <- function(f, fn = NULL, msg = TRUE, ...) {
     stop(sprintf("Unable to read file: %s", f))
   }
 
-  ## cache package availability 
+  ## cache package availability
   dt_avail <- requireNamespace("data.table", quietly = TRUE)
   vroom_avail <- requireNamespace("vroom", quietly = TRUE)
   readxl_avail <- requireNamespace("readxl", quietly = TRUE)
@@ -18,7 +18,7 @@ read_file <- function(f, fn = NULL, msg = TRUE, ...) {
   readstata13_avail <- requireNamespace("readstata13", quietly = TRUE)
   haven_avail <- requireNamespace("haven", quietly = TRUE)
 
-  ## determine reader function 
+  ## determine reader function
   if (is.null(fn)) {
     ext <- tolower(tools::file_ext(f))
     fn <- switch(ext,
@@ -61,7 +61,7 @@ read_file <- function(f, fn = NULL, msg = TRUE, ...) {
           function(path, ...) readstata13::read.dta13(path, ...)
         } else {
         stop("Reading .dta requires package 'haven' or 'readstata13'.")
-        }   
+        }
       },
       sav = {
         if (haven_avail) {
@@ -180,12 +180,12 @@ write_file <- function(x, path, overwrite = FALSE, msg = TRUE, ...) {
 #' @title Read Survey Data from Database Path
 #'
 #' @description Loads a survey dataset by reading the file path from the datasets table.
-#' The file path is constructed by combining the ROOT_DIR environment variable with 
+#' The file path is constructed by combining the ROOT_DIR environment variable with
 #' the path from either the original_path or path column.
 #'
 #' @param conn A DBI database connection object
 #' @param dataset_tag The tag of the dataset to read
-#' @param use_original Logical. If TRUE (default), uses the original_path column. 
+#' @param use_original Logical. If TRUE (default), uses the original_path column.
 #'   If FALSE, uses the path column.
 #' @param msg Logical. If TRUE, prints a message when reading the file.
 #' @param ... Additional arguments passed to read_file
@@ -202,38 +202,38 @@ write_file <- function(x, path, overwrite = FALSE, msg = TRUE, ...) {
 #'
 #' @export
 read_survey_data <- function(conn, dataset_tag, use_original = FALSE, msg = TRUE, ...) {
-  
+
   if (missing(conn) || missing(dataset_tag)) {
     stop("Both 'conn' and 'dataset_tag' are required.")
   }
-  
+
   # Get ROOT_DIR from environment
   ROOT_DIR <- Sys.getenv("ROOT_DIR")
   if (ROOT_DIR == "") {
     stop("ROOT_DIR environment variable is not set.")
   }
-  
+
   # Determine which column to use
   path_column <- if (use_original) "original_path" else "path"
-  
+
   # Query the datasets table
   query <- paste0("SELECT ", path_column, " FROM datasets WHERE tag = $1 LIMIT 1")
   result <- DBI::dbGetQuery(conn, query, params = list(dataset_tag))
-  
+
   if (nrow(result) == 0) {
     stop(sprintf("No dataset found with dataset_tag = '%s'", dataset_tag))
   }
-  
+
   # Get the relative path
   relative_path <- result[[path_column]][1]
-  
+
   if (is.na(relative_path) || relative_path == "") {
     stop(sprintf("The %s column is empty or NA for dataset_tag = '%s'", path_column, dataset_tag))
   }
-  
+
   # Construct the full path
   full_path <- file.path(ROOT_DIR, relative_path)
-  
+
   # Use read_file to load the data
   read_file(full_path, msg = msg, ...)
 }
@@ -251,7 +251,7 @@ read_survey_data <- function(conn, dataset_tag, use_original = FALSE, msg = TRUE
 #'
 #' @examples
 #' \dontrun{
-#' df <- data.frame("First Name" = 1:3, "Last.Name" = letters[1:3], 
+#' df <- data.frame("First Name" = 1:3, "Last.Name" = letters[1:3],
 #'                  "Age (years)" = c(25, 30, 35))
 #' clean_df <- clean_varnames(df)
 #' names(clean_df)  # "first_name" "last_name" "age_years"
@@ -262,10 +262,10 @@ clean_varnames <- function(data) {
   if (!is.data.frame(data)) {
     stop("Input must be a data frame.")
   }
-  
+
   # Get current names
   old_names <- names(data)
-  
+
   # Clean names
   new_names <- old_names
   new_names <- tolower(new_names)                           # Convert to lowercase
@@ -273,20 +273,37 @@ clean_varnames <- function(data) {
   new_names <- gsub("[^a-z0-9_]", "", new_names)            # Remove special characters (keep letters, numbers, underscores)
   new_names <- gsub("_+", "_", new_names)                   # Replace multiple underscores with single underscore
   new_names <- gsub("^_|_$", "", new_names)                 # Remove leading/trailing underscores
-  
+
   # Handle empty names or duplicates
   if (any(new_names == "")) {
     empty_idx <- which(new_names == "")
     new_names[empty_idx] <- paste0("var_", empty_idx)
   }
-  
+
   # Handle duplicate names
   if (any(duplicated(new_names))) {
     new_names <- make.unique(new_names, sep = "_")
   }
-  
+
   # Assign cleaned names
   names(data) <- new_names
-  
+
+  return(data)
+}
+
+
+#' export
+remove_all_labels <- function(data) {
+  attr(data, "variable.labels") <- NULL
+
+  data[] <- lapply(data, function(x) {
+    attr(x, "label") <- NULL
+    attr(x, "labels") <- NULL
+    attr(x, "format.spss") <- NULL
+    attr(x, "display_width") <- NULL
+    class(x) <- setdiff(class(x), c("haven_labelled", "labelled"))
+    x
+  })
+
   return(data)
 }
