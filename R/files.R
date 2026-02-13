@@ -217,7 +217,7 @@ read_survey_data <- function(conn, dataset_tag, use_original = FALSE, msg = TRUE
   path_column <- if (use_original) "original_path" else "path"
 
   # Query the datasets table
-  query <- paste0("SELECT ", path_column, " FROM datasets WHERE tag = $1 LIMIT 1")
+  query <- paste0("SELECT ", path_column, " FROM datasets WHERE dataset_tag = $1 LIMIT 1")
   result <- DBI::dbGetQuery(conn, query, params = list(dataset_tag))
 
   if (nrow(result) == 0) {
