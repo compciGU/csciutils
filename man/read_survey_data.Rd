@@ -4,34 +4,51 @@
 \alias{read_survey_data}
 \title{Read Survey Data from Database Path}
 \usage{
-read_survey_data(conn, dataset_tag, use_original = FALSE, msg = TRUE, ...)
+read_survey_data(
+  conn,
+  dataset_tag,
+  use_original = TRUE,
+  encoding = NULL,
+  msg = TRUE,
+  ...
+)
 }
 \arguments{
-\item{conn}{A DBI database connection object}
+\item{conn}{A DBI database connection object.}
 
-\item{dataset_tag}{The tag of the dataset to read}
+\item{dataset_tag}{Character. The tag of the dataset to read.}
 
-\item{use_original}{Logical. If TRUE (default), uses the original_path column.
-If FALSE, uses the path column.}
+\item{use_original}{Logical. If `TRUE` (default), uses the `original_path`
+column. If `FALSE`, uses the `path` column.}
 
-\item{msg}{Logical. If TRUE, prints a message when reading the file.}
+\item{encoding}{Character or `NULL`. Encoding passed to the file reader
+(e.g. `"latin1"`). If `NULL` (default), the reader default is used and
+a `"latin1"` retry is attempted automatically on encoding errors.}
 
-\item{...}{Additional arguments passed to read_file}
+\item{msg}{Logical. If `TRUE`, prints progress messages. Default `TRUE`.}
+
+\item{...}{Additional arguments passed to `read_file`.}
 }
 \value{
-The loaded dataset (typically a data frame)
+The loaded dataset as a data frame.
 }
 \description{
-Loads a survey dataset by reading the file path from the datasets table.
-The file path is constructed by combining the ROOT_DIR environment variable with
-the path from either the original_path or path column.
+Loads a survey dataset by reading the file path from the
+  datasets table. The file path is constructed by combining the `ROOT_DIR`
+  environment variable with the path from either the `original_path` or
+  `path` column. If reading fails due to an encoding error, automatically
+  retries with `"latin1"` encoding before giving up.
 }
 \examples{
 \dontrun{
 conn <- set_db_connection()
-data <- read_survey_data(conn, dataset_tag = "survey2024")
-data_processed <- read_survey_data(conn, dataset_tag = "survey2024", use_original = FALSE)
+
+# basic usage — latin1 retry happens automatically if needed
+data <- read_survey_data(conn, dataset_tag = "lits_2")
+
+# force a specific encoding upfront
+data <- read_survey_data(conn, dataset_tag = "lits_2", encoding = "latin1")
+
 DBI::dbDisconnect(conn)
 }
-
 }
