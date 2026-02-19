@@ -176,18 +176,22 @@ write_file <- function(x, path, overwrite = FALSE, msg = TRUE, ...) {
   if (isTRUE(msg)) message(sprintf("Wrote file %s", path))
   invisible(path)
 }
-#' @title Read Survey Data from Database Path
+#' @title Read Survey Data from Database Path or Direct File Path
 #'
-#' @description Loads a survey dataset by reading the file path from the
-#'   datasets table. The file path is constructed by combining the `ROOT_DIR`
-#'   environment variable with the path from either the `original_path` or
-#'   `path` column. If reading fails due to an encoding error, automatically
-#'   retries with `"latin1"` encoding before giving up.
+#' @description Loads a survey dataset either directly from a file path or by
+#'   looking up the path from the datasets table using a database connection.
+#'   If reading fails due to an encoding error, automatically retries with
+#'   `"latin1"` encoding before giving up.
 #'
-#' @param conn A DBI database connection object.
-#' @param dataset_tag Character. The tag of the dataset to read.
+#' @param path Character or `NULL`. Direct path to the file to read. If
+#'   supplied, `conn` and `dataset_tag` are not needed. Default `NULL`.
+#' @param conn A DBI database connection object. Required when `path` is `NULL`.
+#' @param dataset_tag Character. The tag of the dataset to read. Required when
+#'   `path` is `NULL`.
+#' @param tag Character. Alias for `dataset_tag`. Default `NULL`.
 #' @param use_original Logical. If `TRUE` (default), uses the `original_path`
-#'   column. If `FALSE`, uses the `path` column.
+#'   column. If `FALSE`, uses the `path` column. Only used when reading via
+#'   database.
 #' @param encoding Character or `NULL`. Encoding passed to the file reader
 #'   (e.g. `"latin1"`). If `NULL` (default), the reader default is used and
 #'   a `"latin1"` retry is attempted automatically on encoding errors.
@@ -195,113 +199,87 @@ write_file <- function(x, path, overwrite = FALSE, msg = TRUE, ...) {
 #' @param ... Additional arguments passed to `read_file`.
 #'
 #' @return The loaded dataset as a data frame.
-#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
+#' # direct file path
+#' data <- read_survey_data("/path/to/file.dta")
+#'
+#' # via database
 #' conn <- set_db_connection()
-#'
-#' # basic usage — latin1 retry happens automatically if needed
-#' data <- read_survey_data(conn, dataset_tag = "lits_2")
-#'
-#' # force a specific encoding upfront
-#' data <- read_survey_data(conn, dataset_tag = "lits_2", encoding = "latin1")
-#'
+#' data <- read_survey_data(conn = conn, dataset_tag = "lits_2")
+#' data <- read_survey_data(conn = conn, tag = "lits_2")
 #' DBI::dbDisconnect(conn)
 #' }
-read_survey_data <- function(conn,
-                             dataset_tag,
+read_survey_data <- function(path         = NULL,
+                             conn         = NULL,
+                             dataset_tag  = NULL,
+                             tag          = NULL,
                              use_original = TRUE,
                              encoding     = NULL,
                              msg          = TRUE,
                              ...) {
 
-  # input checks
-  if (missing(conn) || missing(dataset_tag)) {
-    stop("Both `conn` and `dataset_tag` are required.", call. = FALSE)
+  # allow `tag` as alias for `dataset_tag`
+  if (is.null(dataset_tag) && !is.null(tag)) dataset_tag <- tag
+
+  # resolve full file path
+  if (!is.null(path)) {
+
+    # route 1: direct file path
+    if (!file.exists(path)) stop("File not found: ", path, call. = FALSE)
+    full_path   <- path
+    dataset_tag <- basename(path)   # used only for messages
+
+  } else {
+
+    # route 2: database lookup
+    if (is.null(conn) || is.null(dataset_tag)) {
+      stop("Provide either `path` for a direct file read, ",
+           "or both `conn` and `dataset_tag` for a database lookup.",
+           call. = FALSE)
+    }
+
+    ROOT_DIR <- Sys.getenv("ROOT_DIR")
+    if (ROOT_DIR == "") stop("`ROOT_DIR` environment variable is not set.", call. = FALSE)
+
+    path_column <- if (use_original) "original_path" else "path"
+    query       <- paste0("SELECT ", path_column, " FROM datasets WHERE tag = $1 LIMIT 1")
+    result      <- DBI::dbGetQuery(conn, query, params = list(dataset_tag))
+
+    if (nrow(result) == 0) {
+      stop(sprintf("No dataset found with tag = '%s'.", dataset_tag), call. = FALSE)
+    }
+
+    relative_path <- result[[path_column]][1]
+    if (is.na(relative_path) || relative_path == "") {
+      stop(sprintf("The `%s` column is empty or NA for dataset_tag = '%s'.",
+                   path_column, dataset_tag), call. = FALSE)
+    }
+
+    full_path <- file.path(ROOT_DIR, relative_path)
   }
 
-  ROOT_DIR <- Sys.getenv("ROOT_DIR")
-  if (ROOT_DIR == "") {
-    stop("`ROOT_DIR` environment variable is not set.", call. = FALSE)
+  # first read attempt --------------------------------------------------------
+  if (msg && !is.null(encoding)) {
+    cat("NOTE: Reading", dataset_tag, "with encoding =", encoding, "\n")
   }
 
-  # query database for file path
-  path_column <- if (use_original) "original_path" else "path"
-  query       <- paste0(
-    "SELECT ", path_column, " FROM datasets WHERE tag = $1 LIMIT 1"
-  )
-  result <- DBI::dbGetQuery(conn, query, params = list(dataset_tag))
-
-  if (nrow(result) == 0) {
-    stop(sprintf("No dataset found with tag = '%s'.", dataset_tag), call. = FALSE)
-  }
-
-  relative_path <- result[[path_column]][1]
-  if (is.na(relative_path) || relative_path == "") {
-    stop(sprintf("The `%s` column is empty or NA for dataset_tag = '%s'.",
-                 path_column, dataset_tag), call. = FALSE)
-  }
-
-  full_path <- file.path(ROOT_DIR, relative_path)
-
-  # read file with automatic latin1 fallback
-  .read_with_encoding_fallback(
-    full_path   = full_path,
-    dataset_tag = dataset_tag,
-    encoding    = encoding,
-    msg         = msg,
-    ...
-  )
-}
-
-
-#' Attempt to read a file, retrying with latin1 on encoding errors
-#'
-#' First attempts to read with the supplied `encoding` (or the reader default
-#' if `NULL`). If the read fails with an encoding-related error, automatically
-#' retries with `encoding = "latin1"`. Any other error is re-thrown immediately.
-#'
-#' @param full_path Character. Full file path to read.
-#' @param dataset_tag Character. Used only for console messages.
-#' @param encoding Character or `NULL`. Encoding for the first attempt.
-#' @param msg Logical. Print progress messages?
-#' @param ... Additional arguments passed to `read_file`.
-#'
-#' @return A data frame.
-#' @keywords internal
-.read_with_encoding_fallback <- function(full_path, dataset_tag, encoding, msg, ...) {
-
-  is_encoding_error <- function(e) {
-    grepl("encoding|invalid byte|convert string",
-          conditionMessage(e), ignore.case = TRUE)
-  }
-
-  # first attempt
   first_result <- tryCatch(
-    {
-      if (!is.null(encoding)) {
-        if (msg) cat("NOTE: Reading", dataset_tag, "with encoding =", encoding, "\n")
-        read_file(full_path, encoding = encoding, msg = msg, ...)
-      } else {
-        read_file(full_path, msg = msg, ...)
-      }
-    },
+    read_file(full_path, encoding = encoding, msg = msg, ...),
     error = function(e) e
   )
 
-  # success
   if (!inherits(first_result, "error")) return(first_result)
 
-  # non-encoding error — re-throw immediately
-  if (!is_encoding_error(first_result)) stop(first_result)
+  # non-encoding error — re-throw immediately ---------------------------------
+  is_encoding_error <- grepl("encoding|invalid byte|convert string",
+                             conditionMessage(first_result), ignore.case = TRUE)
+  if (!is_encoding_error) stop(first_result)
 
-  # encoding error — retry with latin1
-  if (msg) {
-    cat("NOTE: Encoding error detected for", dataset_tag,
-        "- retrying with encoding = 'latin1'.\n")
-  }
+  # encoding error — retry with latin1 ----------------------------------------
+  if (msg) cat("NOTE: Encoding error for", dataset_tag, "- retrying with latin1.\n")
 
   tryCatch(
     read_file(full_path, encoding = "latin1", msg = msg, ...),
@@ -313,7 +291,6 @@ read_survey_data <- function(conn,
     }
   )
 }
-
 #' @title Clean Variable Names in a Dataset
 #'
 #' @description Converts all variable names in a dataset to a clean format by:

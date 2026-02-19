@@ -2,11 +2,13 @@
 % Please edit documentation in R/files.R
 \name{read_survey_data}
 \alias{read_survey_data}
-\title{Read Survey Data from Database Path}
+\title{Read Survey Data from Database Path or Direct File Path}
 \usage{
 read_survey_data(
-  conn,
-  dataset_tag,
+  path = NULL,
+  conn = NULL,
+  dataset_tag = NULL,
+  tag = NULL,
   use_original = TRUE,
   encoding = NULL,
   msg = TRUE,
@@ -14,12 +16,19 @@ read_survey_data(
 )
 }
 \arguments{
-\item{conn}{A DBI database connection object.}
+\item{path}{Character or `NULL`. Direct path to the file to read. If
+supplied, `conn` and `dataset_tag` are not needed. Default `NULL`.}
 
-\item{dataset_tag}{Character. The tag of the dataset to read.}
+\item{conn}{A DBI database connection object. Required when `path` is `NULL`.}
+
+\item{dataset_tag}{Character. The tag of the dataset to read. Required when
+`path` is `NULL`.}
+
+\item{tag}{Character. Alias for `dataset_tag`. Default `NULL`.}
 
 \item{use_original}{Logical. If `TRUE` (default), uses the `original_path`
-column. If `FALSE`, uses the `path` column.}
+column. If `FALSE`, uses the `path` column. Only used when reading via
+database.}
 
 \item{encoding}{Character or `NULL`. Encoding passed to the file reader
 (e.g. `"latin1"`). If `NULL` (default), the reader default is used and
@@ -33,22 +42,20 @@ a `"latin1"` retry is attempted automatically on encoding errors.}
 The loaded dataset as a data frame.
 }
 \description{
-Loads a survey dataset by reading the file path from the
-  datasets table. The file path is constructed by combining the `ROOT_DIR`
-  environment variable with the path from either the `original_path` or
-  `path` column. If reading fails due to an encoding error, automatically
-  retries with `"latin1"` encoding before giving up.
+Loads a survey dataset either directly from a file path or by
+  looking up the path from the datasets table using a database connection.
+  If reading fails due to an encoding error, automatically retries with
+  `"latin1"` encoding before giving up.
 }
 \examples{
 \dontrun{
+# direct file path
+data <- read_survey_data("/path/to/file.dta")
+
+# via database
 conn <- set_db_connection()
-
-# basic usage — latin1 retry happens automatically if needed
-data <- read_survey_data(conn, dataset_tag = "lits_2")
-
-# force a specific encoding upfront
-data <- read_survey_data(conn, dataset_tag = "lits_2", encoding = "latin1")
-
+data <- read_survey_data(conn = conn, dataset_tag = "lits_2")
+data <- read_survey_data(conn = conn, tag = "lits_2")
 DBI::dbDisconnect(conn)
 }
 }
