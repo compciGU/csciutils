@@ -204,7 +204,7 @@ write_file <- function(x, path, overwrite = FALSE, msg = TRUE, ...) {
 read_survey_data <- function(conn, dataset_tag, use_original = FALSE, msg = TRUE, ...) {
 
   if (missing(conn) || missing(dataset_tag)) {
-    stop("Both 'conn' and 'dataset_tag' are required.")
+    stop("Both 'conn' and 'tag' are required.")
   }
 
   # Get ROOT_DIR from environment
@@ -218,17 +218,17 @@ read_survey_data <- function(conn, dataset_tag, use_original = FALSE, msg = TRUE
 
   # Query the datasets table
   query <- paste0("SELECT ", path_column, " FROM datasets WHERE tag = $1 LIMIT 1")
-  result <- DBI::dbGetQuery(conn, query, params = list(dataset_tag))
+  result <- DBI::dbGetQuery(conn, query, params = list(tag))
 
   if (nrow(result) == 0) {
-    stop(sprintf("No dataset found with dataset_tag = '%s'", dataset_tag))
+    stop(sprintf("No dataset found with tag = '%s'", tag))
   }
 
   # Get the relative path
   relative_path <- result[[path_column]][1]
 
   if (is.na(relative_path) || relative_path == "") {
-    stop(sprintf("The %s column is empty or NA for dataset_tag = '%s'", path_column, dataset_tag))
+    stop(sprintf("The %s column is empty or NA for dataset_tag = '%s'", path_column, tag))
   }
 
   # Construct the full path
