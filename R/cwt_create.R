@@ -5,25 +5,25 @@
 #'   and \code{study_wave}
 #' @return A CWT data frame with one row per value per variable per wave
 #' @export
-create_cwt <- function(survey_list, vars_df) {
+create_cwt <- function(survey_data, variable_map, verbose = TRUE) {
 
   labels_list <- list()
   index       <- 1
 
-  for (n in names(survey_list)) {
+  for (n in names(survey_data)) {
     cat("Survey:", n, "\n")
 
-    dataset    <- survey_list[[n]]
+    dataset    <- survey_data[[n]]
     study_wave <- n
-    vars       <- vars_df$src_var[tolower(vars_df$study_wave) == study_wave]
+    vars       <- variable_map$src_var[tolower(variable_map$study_wave) == study_wave]
 
     dataset_filtered <- dataset[, tolower(names(dataset)) %in% tolower(vars), drop = FALSE]
 
     for (v in names(dataset_filtered)) {
 
-      target_var <- vars_df$target_var[
-        toupper(vars_df$src_var)    == toupper(v) &
-          toupper(vars_df$study_wave) == toupper(study_wave)
+      target_var <- variable_map$target_var[
+        toupper(variable_map$src_var)    == toupper(v) &
+          toupper(variable_map$study_wave) == toupper(study_wave)
       ]
       target_var <- target_var[!is.na(target_var)]
 
@@ -50,6 +50,6 @@ create_cwt <- function(survey_list, vars_df) {
 
   cwt <- dplyr::bind_rows(labels_list)
   cwt <- collapse_tech_vars(cwt)                          # utils_vars
-  check_missing_vars(cwt, vars_df)                        # utils_vars
+  check_missing_vars(cwt, variable_map)                        # utils_vars
   cwt
 }

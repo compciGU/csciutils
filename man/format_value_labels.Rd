@@ -7,8 +7,7 @@
 format_value_labels(var_values, var_name, wave_name, verbose = TRUE)
 }
 \arguments{
-\item{var_values}{A vector from a survey dataset, possibly carrying
-Stata/haven attributes (`label`, `labels`).}
+\item{var_values}{A vector from a survey dataset}
 
 \item{var_name}{Character. Variable name, used only for console messages.}
 
@@ -17,19 +16,9 @@ Stata/haven attributes (`label`, `labels`).}
 \item{verbose}{Logical. Print progress messages? Default `TRUE`.}
 }
 \value{
-A named list with three elements:
-  \describe{
-    \item{var_label}{Character scalar. Variable label from Stata metadata,
-      or `NA` if absent.}
-    \item{label_formatted}{Character vector of formatted value labels,
-      e.g. `"[1] Yes"`.}
-    \item{code_formatted}{Character vector of raw value codes aligned to
-      `label_formatted`.}
-  }
+A named list with `var_label`, `label_formatted`, `code_formatted`.
 }
 \description{
-Handles three cases: no Stata labels exist (falls back to observed values),
-more observed values than Stata labels (merges both), and Stata labels fully
-covering observed values (uses labels as-is).
+Format value labels for a single survey variable
 }
 \keyword{internal}

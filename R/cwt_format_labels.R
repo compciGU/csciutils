@@ -1,35 +1,27 @@
 #' Format value labels for a single survey variable
 #'
-#' Handles three cases: no Stata labels exist (falls back to observed values),
-#' more observed values than Stata labels (merges both), and Stata labels fully
-#' covering observed values (uses labels as-is).
-#'
-#' @param var_values A vector from a survey dataset, possibly carrying
-#'   Stata/haven attributes (`label`, `labels`).
+#' @param var_values A vector from a survey dataset
 #' @param var_name Character. Variable name, used only for console messages.
 #' @param wave_name Character. Study wave name, used only for console messages.
 #' @param verbose Logical. Print progress messages? Default `TRUE`.
 #'
-#' @return A named list with three elements:
-#'   \describe{
-#'     \item{var_label}{Character scalar. Variable label from Stata metadata,
-#'       or `NA` if absent.}
-#'     \item{label_formatted}{Character vector of formatted value labels,
-#'       e.g. `"[1] Yes"`.}
-#'     \item{code_formatted}{Character vector of raw value codes aligned to
-#'       `label_formatted`.}
-#'   }
+#' @return A named list with `var_label`, `label_formatted`, `code_formatted`.
 #' @keywords internal
 format_value_labels <- function(var_values, var_name, wave_name, verbose = TRUE) {
 
+  # extract variable label (from Stata/haven metadata); use NA if absent
   var_label <- attr(var_values, "label")
   if (is.null(var_label)) var_label <- NA_character_
 
-  labels     <- attr(var_values, "labels", exact = TRUE)
-  labels_obs <- unique(as.character(var_values))
+  # extract Stata value labels if present
+  labels <- attr(var_values, "labels", exact = TRUE)
+
+  # get unique observed values as strings, drop NAs, sort numerically
+  labels_obs <- unique(as.character(unclass(var_values)))
   labels_obs <- labels_obs[!is.na(labels_obs)]
   labels_obs <- labels_obs[order(as.numeric(labels_obs))]
 
+  # Case 1: no Stata labels — fall back to observed values --------------------
   if (is.null(labels) || all(is.na(labels))) {
 
     if (verbose)
@@ -39,27 +31,42 @@ format_value_labels <- function(var_values, var_name, wave_name, verbose = TRUE)
     label_formatted <- paste0("[", labels_obs, "] ", labels_obs)
     code_formatted  <- labels_obs
 
+    # Case 2: Stata labels exist ------------------------------------------------
   } else {
 
+    # sort Stata labels by their numeric code
     labels      <- labels[order(as.numeric(unname(labels)))]
     stata_codes <- as.character(unname(labels))
 
+    # Case 2a: more observed values than Stata labels — merge both ------------
     if (length(unique(labels_obs)) > length(unique(stata_codes))) {
 
       if (verbose)
         cat("NOTE: More observed values than Stata labels for variable:", var_name,
             "in dataset:", wave_name, "- combining observed values with Stata labels.\n")
 
-      label_formatted <- .merge_obs_stata(labels_obs, stata_codes, labels)
+      # observed values not covered by Stata labels
+      extra_obs  <- setdiff(labels_obs, stata_codes)
+      obs_fmt    <- paste0("[", extra_obs, "] ", extra_obs)
+
+      # strip leading numeric codes from Stata label text (e.g. "1. Yes" -> "Yes")
+      label_text <- gsub("^\\s*[-+]?\\d+(?:\\.\\d+)?\\s*\\.\\s*", "", names(labels))
+      stata_fmt  <- paste0("[", stata_codes, "] ", label_text)
+
+      # combine and re-sort by numeric code
+      label_formatted <- c(obs_fmt, stata_fmt)
+      codes           <- as.numeric(sub("^\\[(-?\\d+)\\].*", "\\1", label_formatted))
+      label_formatted <- label_formatted[order(codes)]
       code_formatted  <- c(labels_obs, setdiff(stata_codes, labels_obs))
 
+      # Case 2b: Stata labels fully cover observed values — use labels as-is ----
     } else {
 
       if (verbose)
         cat("NOTE: Using Stata value labels for variable:", var_name,
             "in dataset:", wave_name, "- observed values fully covered by labels.\n")
 
-      label_text      <- .strip_stata_prefix(names(labels))
+      label_text      <- gsub("^\\s*[-+]?\\d+(?:\\.\\d+)?\\s*\\.\\s*", "", names(labels))
       label_formatted <- paste0("[", stata_codes, "] ", label_text)
       code_formatted  <- stata_codes
     }
@@ -71,7 +78,6 @@ format_value_labels <- function(var_values, var_name, wave_name, verbose = TRUE)
     code_formatted  = code_formatted
   )
 }
-
 #' Count observed values aligned to a vector of value codes
 #'
 #' Tabulates `var_values` and aligns the counts to `code_formatted`, returning
@@ -85,7 +91,7 @@ format_value_labels <- function(var_values, var_name, wave_name, verbose = TRUE)
 #' @return Character vector of strings in the form `"[1] Yes: 42"`.
 #' @keywords internal
 count_obs <- function(var_values, code_formatted, label_formatted) {
-  tab       <- table(var_values, useNA = "ifany")
+  tab       <- table(as.character(unclass(var_values)), useNA = "ifany")
   n_obs_raw <- tab[match(code_formatted, names(tab))]
   n_obs_raw[is.na(n_obs_raw)] <- 0
   paste0(label_formatted, ": ", as.integer(n_obs_raw))

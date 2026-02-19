@@ -4,7 +4,7 @@
 \alias{create_cwt}
 \title{Create a Codebook with Value Labels (CWT)}
 \usage{
-create_cwt(survey_list, vars_df)
+create_cwt(survey_data, variable_map, verbose = TRUE)
 }
 \arguments{
 \item{survey_list}{A named list of survey data frames, keyed by study_wave}
