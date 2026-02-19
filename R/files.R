@@ -176,66 +176,142 @@ write_file <- function(x, path, overwrite = FALSE, msg = TRUE, ...) {
   if (isTRUE(msg)) message(sprintf("Wrote file %s", path))
   invisible(path)
 }
-
 #' @title Read Survey Data from Database Path
 #'
-#' @description Loads a survey dataset by reading the file path from the datasets table.
-#' The file path is constructed by combining the ROOT_DIR environment variable with
-#' the path from either the original_path or path column.
+#' @description Loads a survey dataset by reading the file path from the
+#'   datasets table. The file path is constructed by combining the `ROOT_DIR`
+#'   environment variable with the path from either the `original_path` or
+#'   `path` column. If reading fails due to an encoding error, automatically
+#'   retries with `"latin1"` encoding before giving up.
 #'
-#' @param conn A DBI database connection object
-#' @param dataset_tag The tag of the dataset to read
-#' @param use_original Logical. If TRUE (default), uses the original_path column.
-#'   If FALSE, uses the path column.
-#' @param msg Logical. If TRUE, prints a message when reading the file.
-#' @param ... Additional arguments passed to read_file
+#' @param conn A DBI database connection object.
+#' @param dataset_tag Character. The tag of the dataset to read.
+#' @param use_original Logical. If `TRUE` (default), uses the `original_path`
+#'   column. If `FALSE`, uses the `path` column.
+#' @param encoding Character or `NULL`. Encoding passed to the file reader
+#'   (e.g. `"latin1"`). If `NULL` (default), the reader default is used and
+#'   a `"latin1"` retry is attempted automatically on encoding errors.
+#' @param msg Logical. If `TRUE`, prints progress messages. Default `TRUE`.
+#' @param ... Additional arguments passed to `read_file`.
 #'
-#' @return The loaded dataset (typically a data frame)
+#' @return The loaded dataset as a data frame.
+#'
+#' @export
 #'
 #' @examples
 #' \dontrun{
 #' conn <- set_db_connection()
-#' data <- read_survey_data(conn, dataset_tag = "survey2024")
-#' data_processed <- read_survey_data(conn, dataset_tag = "survey2024", use_original = FALSE)
+#'
+#' # basic usage — latin1 retry happens automatically if needed
+#' data <- read_survey_data(conn, dataset_tag = "lits_2")
+#'
+#' # force a specific encoding upfront
+#' data <- read_survey_data(conn, dataset_tag = "lits_2", encoding = "latin1")
+#'
 #' DBI::dbDisconnect(conn)
 #' }
-#'
-#' @export
-read_survey_data <- function(conn, dataset_tag, use_original = FALSE, msg = TRUE, ...) {
+read_survey_data <- function(conn,
+                             dataset_tag,
+                             use_original = TRUE,
+                             encoding     = NULL,
+                             msg          = TRUE,
+                             ...) {
 
+  # input checks
   if (missing(conn) || missing(dataset_tag)) {
-    stop("Both 'conn' and 'tag' are required.")
+    stop("Both `conn` and `dataset_tag` are required.", call. = FALSE)
   }
 
-  # Get ROOT_DIR from environment
   ROOT_DIR <- Sys.getenv("ROOT_DIR")
   if (ROOT_DIR == "") {
-    stop("ROOT_DIR environment variable is not set.")
+    stop("`ROOT_DIR` environment variable is not set.", call. = FALSE)
   }
 
-  # Determine which column to use
+  # query database for file path
   path_column <- if (use_original) "original_path" else "path"
-
-  # Query the datasets table
-  query <- paste0("SELECT ", path_column, " FROM datasets WHERE tag = $1 LIMIT 1")
-  result <- DBI::dbGetQuery(conn, query, params = list(tag))
+  query       <- paste0(
+    "SELECT ", path_column, " FROM datasets WHERE tag = $1 LIMIT 1"
+  )
+  result <- DBI::dbGetQuery(conn, query, params = list(dataset_tag))
 
   if (nrow(result) == 0) {
-    stop(sprintf("No dataset found with tag = '%s'", tag))
+    stop(sprintf("No dataset found with tag = '%s'.", dataset_tag), call. = FALSE)
   }
 
-  # Get the relative path
   relative_path <- result[[path_column]][1]
-
   if (is.na(relative_path) || relative_path == "") {
-    stop(sprintf("The %s column is empty or NA for dataset_tag = '%s'", path_column, tag))
+    stop(sprintf("The `%s` column is empty or NA for dataset_tag = '%s'.",
+                 path_column, dataset_tag), call. = FALSE)
   }
 
-  # Construct the full path
   full_path <- file.path(ROOT_DIR, relative_path)
 
-  # Use read_file to load the data
-  read_file(full_path, msg = msg, ...)
+  # read file with automatic latin1 fallback
+  .read_with_encoding_fallback(
+    full_path   = full_path,
+    dataset_tag = dataset_tag,
+    encoding    = encoding,
+    msg         = msg,
+    ...
+  )
+}
+
+
+#' Attempt to read a file, retrying with latin1 on encoding errors
+#'
+#' First attempts to read with the supplied `encoding` (or the reader default
+#' if `NULL`). If the read fails with an encoding-related error, automatically
+#' retries with `encoding = "latin1"`. Any other error is re-thrown immediately.
+#'
+#' @param full_path Character. Full file path to read.
+#' @param dataset_tag Character. Used only for console messages.
+#' @param encoding Character or `NULL`. Encoding for the first attempt.
+#' @param msg Logical. Print progress messages?
+#' @param ... Additional arguments passed to `read_file`.
+#'
+#' @return A data frame.
+#' @keywords internal
+.read_with_encoding_fallback <- function(full_path, dataset_tag, encoding, msg, ...) {
+
+  is_encoding_error <- function(e) {
+    grepl("encoding|invalid byte|convert string",
+          conditionMessage(e), ignore.case = TRUE)
+  }
+
+  # first attempt
+  first_result <- tryCatch(
+    {
+      if (!is.null(encoding)) {
+        if (msg) cat("NOTE: Reading", dataset_tag, "with encoding =", encoding, "\n")
+        read_file(full_path, encoding = encoding, msg = msg, ...)
+      } else {
+        read_file(full_path, msg = msg, ...)
+      }
+    },
+    error = function(e) e
+  )
+
+  # success
+  if (!inherits(first_result, "error")) return(first_result)
+
+  # non-encoding error — re-throw immediately
+  if (!is_encoding_error(first_result)) stop(first_result)
+
+  # encoding error — retry with latin1
+  if (msg) {
+    cat("NOTE: Encoding error detected for", dataset_tag,
+        "- retrying with encoding = 'latin1'.\n")
+  }
+
+  tryCatch(
+    read_file(full_path, encoding = "latin1", msg = msg, ...),
+    error = function(e) {
+      stop(sprintf(
+        "Failed to read '%s' with both default and latin1 encoding.\nLast error: %s",
+        dataset_tag, conditionMessage(e)
+      ), call. = FALSE)
+    }
+  )
 }
 
 #' @title Clean Variable Names in a Dataset
