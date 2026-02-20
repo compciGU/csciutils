@@ -52,7 +52,7 @@ validate_create_cwt <- function(survey_data, variable_map) {
 validate_append_item <- function(cwt, survey_data, variable_map,
                                  output_dir, output_subdir) {
 
-  required_cols <- c("file_name", "var_name", "study_wave", "target_var")
+  required_cols <- c("var_name", "study_wave", "target_var")
   missing_cols  <- setdiff(required_cols, names(cwt))
   if (length(missing_cols) > 0) {
     stop("`cwt` is missing required columns: ",

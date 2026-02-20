@@ -20,11 +20,11 @@
 #' @return The full file path, invisibly.
 #' @keywords internal
 save_cwt <- function(cwt,
-                     output_dir    = getwd(),
-                     output_subdir = NULL,
+                     output_dir    = ROOT_DIR,
+                     output_subdir = "cwt_swd/cwts_appended",
                      file_prefix   = NULL,
                      file_suffix   = "_cwt_appended",
-                     study_wave    = NULL,
+                     #study_wave    = NULL, # i do it dynamically from the existing cwt (given the column is named study_wave)
                      overwrite     = TRUE,
                      msg           = TRUE) {
 
@@ -34,7 +34,7 @@ save_cwt <- function(cwt,
       stop("Provide either `file_prefix` or `study_wave` to derive a file name.",
            call. = FALSE)
     }
-    file_prefix <- sub("_.*$", "", tolower(study_wave))
+    file_prefix <- sub("_.*$", "", tolower(cwt$study_wave[1]))
   }
 
   # resolve output path -------------------------------------------------------

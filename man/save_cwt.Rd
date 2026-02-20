@@ -6,11 +6,10 @@
 \usage{
 save_cwt(
   cwt,
-  output_dir = getwd(),
-  output_subdir = NULL,
+  output_dir = ROOT_DIR,
+  output_subdir = "cwt_swd/cwts_appended",
   file_prefix = NULL,
   file_suffix = "_cwt_appended",
-  study_wave = NULL,
   overwrite = TRUE,
   msg = TRUE
 )
@@ -29,12 +28,12 @@ from `study_wave` if `NULL`. Default `NULL`.}
 \item{file_suffix}{Character. String appended before the extension.
 Default `"_cwt_appended"`.}
 
-\item{study_wave}{Character. A study wave string (e.g. `"lits_3"`) used
-to derive `file_prefix` when `file_prefix` is `NULL`. Default `NULL`.}
-
 \item{overwrite}{Logical. Overwrite an existing file? Default `TRUE`.}
 
 \item{msg}{Logical. Print a message after saving? Default `TRUE`.}
+
+\item{study_wave}{Character. A study wave string (e.g. `"lits_3"`) used
+to derive `file_prefix` when `file_prefix` is `NULL`. Default `NULL`.}
 }
 \value{
 The full file path, invisibly.

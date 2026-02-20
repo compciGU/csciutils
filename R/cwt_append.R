@@ -27,7 +27,7 @@ append_item <- function(cwt, survey, vars_df, save_file = TRUE, dir = getwd(),
 
   validate_append_item(cwt, survey, vars_df, dir, out_dir)
 
-  has_waves <- length(unique(cwt$file_name)) > 1
+  has_waves <- length(unique(cwt$study_wave)) > 1
 
   if (align_surveys_with_cwt && has_waves) {
     survey <- align_survey_to_cwt(survey, cwt, verbose = verbose)

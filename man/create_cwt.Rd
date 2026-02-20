@@ -2,7 +2,7 @@
 % Please edit documentation in R/cwt_create.R
 \name{create_cwt}
 \alias{create_cwt}
-\title{Create a Codebook with Value Labels (CWT)}
+\title{Create a Crosswalk with Value Labels (CWT)}
 \usage{
 create_cwt(survey_data, variable_map, verbose = TRUE)
 }
@@ -16,5 +16,5 @@ and \code{study_wave}}
 A CWT data frame with one row per value per variable per wave
 }
 \description{
-Create a Codebook with Value Labels (CWT)
+Create a Crosswalk with Value Labels (CWT)
 }

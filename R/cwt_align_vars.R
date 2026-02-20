@@ -38,6 +38,7 @@ collapse_tech_vars <- function(cwt) {
 #' @return Called for its side effect. Returns `NULL` invisibly.
 #' @keywords internal
 check_missing_vars <- function(cwt, variable_map, verbose = TRUE) {
+
   missing <- setdiff(tolower(variable_map$src_var), unique(tolower(cwt$var_name)))
   if (length(missing) > 0 && verbose) {
     cat("NOTE: These variable_map variables were not found in the survey data:",

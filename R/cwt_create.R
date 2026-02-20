@@ -1,4 +1,4 @@
-#' Create a Codebook with Value Labels (CWT)
+#' Create a Crosswalk with Value Labels (CWT)
 #'
 #' @param survey_list A named list of survey data frames, keyed by study_wave
 #' @param vars_df A data frame with columns \code{src_var}, \code{target_var},
@@ -49,7 +49,7 @@ create_cwt <- function(survey_data, variable_map, verbose = TRUE) {
   }
 
   cwt <- dplyr::bind_rows(labels_list)
-  cwt <- collapse_tech_vars(cwt)                          # utils_vars
-  check_missing_vars(cwt, variable_map)                        # utils_vars
+  cwt <- collapse_tech_vars(cwt)
+  check_missing_vars(cwt, variable_map)
   cwt
 }
