@@ -38,10 +38,10 @@ save_cwt <- function(cwt,
   }
 
   # resolve output path -------------------------------------------------------
-  output_path <- if (!is.null(output_subdir)) {
-    file.path(output_dir, output_subdir)
+  if (!is.null(output_subdir)) {
+    output_path <- file.path(output_dir, output_subdir)
   } else {
-    output_dir
+    output_path <- output_dir
   }
 
   # build full file path ------------------------------------------------------
