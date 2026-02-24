@@ -17,13 +17,13 @@ save_cwt(
 \arguments{
 \item{cwt}{A CWT data frame to save.}
 
-\item{output_dir}{Root output directory. Default `getwd()`.}
+\item{output_dir}{Root output directory. Default `ROOT_DIR`.}
 
 \item{output_subdir}{Sub-directory relative to `output_dir`. Set to `NULL`
-to save directly in `output_dir`. Default `NULL`.}
+to save directly in `output_dir`. Default `"cwt_swd/cwts_appended"`.}
 
 \item{file_prefix}{Character. String prepended to the file name. Derived
-from `study_wave` if `NULL`. Default `NULL`.}
+from `cwt$study_wave[1]` if `NULL`. Default `NULL`.}
 
 \item{file_suffix}{Character. String appended before the extension.
 Default `"_cwt_appended"`.}
@@ -31,16 +31,13 @@ Default `"_cwt_appended"`.}
 \item{overwrite}{Logical. Overwrite an existing file? Default `TRUE`.}
 
 \item{msg}{Logical. Print a message after saving? Default `TRUE`.}
-
-\item{study_wave}{Character. A study wave string (e.g. `"lits_3"`) used
-to derive `file_prefix` when `file_prefix` is `NULL`. Default `NULL`.}
 }
 \value{
 The full file path, invisibly.
 }
 \description{
 A general-purpose file writer for CWT outputs built on top of [write_file()].
-The file name is built as `{file_prefix}{file_suffix}.xlsx`. Either
-`file_prefix` or `study_wave` must be supplied so a name can be resolved.
+The file name is built as `{file_prefix}{file_suffix}.xlsx`. If `file_prefix`
+is `NULL`, it is derived from `cwt$study_wave[1]`.
 }
 \keyword{internal}

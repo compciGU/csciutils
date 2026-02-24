@@ -4,10 +4,10 @@
 \alias{align_survey_to_cwt}
 \title{Subset a survey list to waves present in an existing CWT}
 \usage{
-align_survey_to_cwt(survey_data, cwt, verbose = TRUE)
+align_survey_to_cwt(my_survey_list, cwt, verbose = TRUE)
 }
 \arguments{
-\item{survey_data}{Named list of survey data frames.}
+\item{my_survey_list}{Named list of survey data frames.}
 
 \item{cwt}{A CWT data frame with a `study_wave` column.}
 
@@ -17,7 +17,7 @@ align_survey_to_cwt(survey_data, cwt, verbose = TRUE)
 A filtered named list of survey data frames.
 }
 \description{
-Filters `survey_data` to retain only the waves whose `study_wave` values
+Filters `my_survey_list` to retain only the waves whose `study_wave` values
 appear in `cwt`. Warns if the CWT references waves absent from the survey.
 }
 \keyword{internal}

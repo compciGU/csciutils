@@ -2,60 +2,36 @@
 % Please edit documentation in R/files.R
 \name{read_survey_data}
 \alias{read_survey_data}
-\title{Read Survey Data from Database Path or Direct File Path}
+\title{Read Survey Data from Database Path}
 \usage{
-read_survey_data(
-  path = NULL,
-  conn = NULL,
-  dataset_tag = NULL,
-  tag = NULL,
-  use_original = TRUE,
-  encoding = NULL,
-  msg = TRUE,
-  ...
-)
+read_survey_data(conn, tag, use_original = FALSE, msg = TRUE, ...)
 }
 \arguments{
-\item{path}{Character or `NULL`. Direct path to the file to read. If
-supplied, `conn` and `dataset_tag` are not needed. Default `NULL`.}
+\item{conn}{A DBI database connection object}
 
-\item{conn}{A DBI database connection object. Required when `path` is `NULL`.}
+\item{use_original}{Logical. If TRUE (default), uses the original_path column.
+If FALSE, uses the path column.}
 
-\item{dataset_tag}{Character. The tag of the dataset to read. Required when
-`path` is `NULL`.}
+\item{msg}{Logical. If TRUE, prints a message when reading the file.}
 
-\item{tag}{Character. Alias for `dataset_tag`. Default `NULL`.}
+\item{...}{Additional arguments passed to read_file}
 
-\item{use_original}{Logical. If `TRUE` (default), uses the `original_path`
-column. If `FALSE`, uses the `path` column. Only used when reading via
-database.}
-
-\item{encoding}{Character or `NULL`. Encoding passed to the file reader
-(e.g. `"latin1"`). If `NULL` (default), the reader default is used and
-a `"latin1"` retry is attempted automatically on encoding errors.}
-
-\item{msg}{Logical. If `TRUE`, prints progress messages. Default `TRUE`.}
-
-\item{...}{Additional arguments passed to `read_file`.}
+\item{dataset_tag}{The tag of the dataset to read}
 }
 \value{
-The loaded dataset as a data frame.
+The loaded dataset (typically a data frame)
 }
 \description{
-Loads a survey dataset either directly from a file path or by
-  looking up the path from the datasets table using a database connection.
-  If reading fails due to an encoding error, automatically retries with
-  `"latin1"` encoding before giving up.
+Loads a survey dataset by reading the file path from the datasets table.
+The file path is constructed by combining the ROOT_DIR environment variable with
+the path from either the original_path or path column.
 }
 \examples{
 \dontrun{
-# direct file path
-data <- read_survey_data("/path/to/file.dta")
-
-# via database
 conn <- set_db_connection()
-data <- read_survey_data(conn = conn, dataset_tag = "lits_2")
-data <- read_survey_data(conn = conn, tag = "lits_2")
+data <- read_survey_data(conn, dataset_tag = "survey2024")
+data_processed <- read_survey_data(conn, dataset_tag = "survey2024", use_original = FALSE)
 DBI::dbDisconnect(conn)
 }
+
 }

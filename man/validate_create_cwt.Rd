@@ -4,10 +4,10 @@
 \alias{validate_create_cwt}
 \title{Validate inputs to create_cwt}
 \usage{
-validate_create_cwt(survey_data, variable_map)
+validate_create_cwt(my_survey_list, variable_map)
 }
 \arguments{
-\item{survey_data}{A named list of survey data frames.}
+\item{my_survey_list}{A named list of survey data frames.}
 
 \item{variable_map}{A data frame with columns `src_var`, `target_var`, and
 `study_wave`.}
@@ -16,8 +16,8 @@ validate_create_cwt(survey_data, variable_map)
 `TRUE` invisibly. Called for its side effects (errors/warnings).
 }
 \description{
-Checks that `survey_data` is a named list and that `variable_map` contains
+Checks that `my_survey_list` is a named list and that `variable_map` contains
 the required columns. Warns if any `study_wave` values in `variable_map`
-have no corresponding entry in `survey_data`.
+have no corresponding entry in `my_survey_list`.
 }
 \keyword{internal}

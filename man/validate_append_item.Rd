@@ -4,12 +4,18 @@
 \alias{validate_append_item}
 \title{Validate inputs to append_item}
 \usage{
-validate_append_item(cwt, survey_data, variable_map, output_dir, output_subdir)
+validate_append_item(
+  cwt,
+  my_survey_list,
+  variable_map,
+  output_dir,
+  output_subdir
+)
 }
 \arguments{
 \item{cwt}{An existing CWT data frame.}
 
-\item{survey_data}{A named list of survey data frames.}
+\item{my_survey_list}{A named list of survey data frames.}
 
 \item{variable_map}{A variable mapping data frame.}
 
@@ -22,7 +28,7 @@ validate_append_item(cwt, survey_data, variable_map, output_dir, output_subdir)
 }
 \description{
 Checks that `cwt` contains the required columns, delegates to
-[validate_create_cwt()] for `survey_data` and `variable_map`, and ensures
+[validate_create_cwt()] for `my_survey_list` and `variable_map`, and ensures
 the output directory exists (creating it if needed).
 }
 \keyword{internal}
