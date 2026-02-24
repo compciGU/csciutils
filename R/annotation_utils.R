@@ -126,10 +126,13 @@ create_vars_lookup <- function(my_survey_list,
 #' }
 #' @export
 query_annotations <- function(conn,
-                                  table,
-                                  id_cols = c("dataset_id", "study_wave"),
-                                  split_separators = "\\s*[;,]\\s*",
-                                  verbose = TRUE) {
+                              table,
+                              id_cols = c("dataset_id", "study_wave"),
+                              split_separators = "\\s*[;,]\\s*",
+                              format = c("long", "wide"),
+                              verbose = TRUE) {
+
+  format <- match.arg(format)
 
   sql <- paste0("SELECT * FROM ", table, ";")
   ann <- DBI::dbGetQuery(conn, sql)
@@ -138,6 +141,12 @@ query_annotations <- function(conn,
   if (length(missing_cols) > 0) {
     stop("Annotation table is missing required id column(s): ",
          paste(missing_cols, collapse = ", "), call. = FALSE)
+  }
+
+  if (format == "wide") {
+    if (verbose)
+      cat("Loaded", nrow(ann), "row(s) from", table, "in wide format\n")
+    return(ann)
   }
 
   value_cols <- setdiff(names(ann), id_cols)
@@ -162,7 +171,7 @@ query_annotations <- function(conn,
 
   ann_long <- do.call(rbind, long_list)
 
-  # split multiple mappings into rows (base R) --------------------------------
+  # split multiple mappings into rows -----------------------------------------
   ann_long$src_var <- trimws(as.character(ann_long$src_var))
   keep <- !is.na(ann_long$src_var) & ann_long$src_var != ""
   ann_long <- ann_long[keep, , drop = FALSE]
@@ -170,21 +179,22 @@ query_annotations <- function(conn,
   if (nrow(ann_long) > 0) {
 
     parts <- strsplit(ann_long$src_var, split_separators, perl = TRUE)
-
-    # how many rows each original row becomes
     n_parts <- lengths(parts)
 
     ann_long_expanded <- ann_long[rep(seq_len(nrow(ann_long)), n_parts), , drop = FALSE]
     ann_long_expanded$src_var <- trimws(unlist(parts, use.names = FALSE))
 
-    keep2 <- !is.na(ann_long_expanded$src_var) & ann_long_expanded$src_var != ""
+    keep2 <- !is.na(ann_long_expanded$src_var) &
+      ann_long_expanded$src_var != ""
+
     ann_long <- ann_long_expanded[keep2, , drop = FALSE]
   }
 
   rownames(ann_long) <- NULL
 
   if (verbose)
-    cat("Loaded", nrow(ann_long), "annotation mapping row(s) from", table, "\n")
+    cat("Loaded", nrow(ann_long), "annotation mapping row(s) from",
+        table, "in long format\n")
 
   ann_long
 }

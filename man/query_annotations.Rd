@@ -9,6 +9,7 @@ query_annotations(
   table,
   id_cols = c("dataset_id", "study_wave"),
   split_separators = "\\\\s*[;,]\\\\s*",
+  format = c("long", "wide"),
   verbose = TRUE
 )
 }
