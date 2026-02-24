@@ -1,19 +1,17 @@
 #' Save a CWT data frame to a file
 #'
 #' A general-purpose file writer for CWT outputs built on top of [write_file()].
-#' The file name is built as `{file_prefix}{file_suffix}.xlsx`. Either
-#' `file_prefix` or `study_wave` must be supplied so a name can be resolved.
+#' The file name is built as `{file_prefix}{file_suffix}.xlsx`. If `file_prefix`
+#' is `NULL`, it is derived from `cwt$study_wave[1]`.
 #'
 #' @param cwt A CWT data frame to save.
-#' @param output_dir Root output directory. Default `getwd()`.
+#' @param output_dir Root output directory. Default `ROOT_DIR`.
 #' @param output_subdir Sub-directory relative to `output_dir`. Set to `NULL`
-#'   to save directly in `output_dir`. Default `NULL`.
+#'   to save directly in `output_dir`. Default `"cwt_swd/cwts_appended"`.
 #' @param file_prefix Character. String prepended to the file name. Derived
-#'   from `study_wave` if `NULL`. Default `NULL`.
+#'   from `cwt$study_wave[1]` if `NULL`. Default `NULL`.
 #' @param file_suffix Character. String appended before the extension.
 #'   Default `"_cwt_appended"`.
-#' @param study_wave Character. A study wave string (e.g. `"lits_3"`) used
-#'   to derive `file_prefix` when `file_prefix` is `NULL`. Default `NULL`.
 #' @param overwrite Logical. Overwrite an existing file? Default `TRUE`.
 #' @param msg Logical. Print a message after saving? Default `TRUE`.
 #'
@@ -24,14 +22,13 @@ save_cwt <- function(cwt,
                      output_subdir = "cwt_swd/cwts_appended",
                      file_prefix   = NULL,
                      file_suffix   = "_cwt_appended",
-                     #study_wave    = NULL, # i do it dynamically from the existing cwt (given the column is named study_wave)
                      overwrite     = TRUE,
                      msg           = TRUE) {
 
   # resolve file prefix -------------------------------------------------------
   if (is.null(file_prefix)) {
-    if (is.null(study_wave)) {
-      stop("Provide either `file_prefix` or `study_wave` to derive a file name.",
+    if (is.null(cwt$study_wave) || length(cwt$study_wave) == 0 || is.na(cwt$study_wave[1])) {
+      stop("`file_prefix` is NULL and `cwt$study_wave[1]` is missing; cannot derive a file name.",
            call. = FALSE)
     }
     file_prefix <- sub("_.*$", "", tolower(cwt$study_wave[1]))

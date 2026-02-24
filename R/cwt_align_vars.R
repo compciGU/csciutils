@@ -38,35 +38,45 @@ collapse_tech_vars <- function(cwt) {
 #' @return Called for its side effect. Returns `NULL` invisibly.
 #' @keywords internal
 check_missing_vars <- function(cwt, variable_map, verbose = TRUE) {
+  missing <- setdiff(
+    tolower(variable_map$src_var),
+    unique(tolower(cwt$var_name))
+  )
 
-  missing <- setdiff(tolower(variable_map$src_var), unique(tolower(cwt$var_name)))
   if (length(missing) > 0 && verbose) {
-    cat("NOTE: These variable_map variables were not found in the survey data:",
-        paste(missing, collapse = ", "), "\nPlease double-check src_var names.\n")
+    cat(
+      "NOTE: These variable_map variables were not found in the survey data:",
+      paste(missing, collapse = ", "),
+      "\nPlease double-check src_var names.\n"
+    )
   }
+
   invisible(NULL)
 }
 
 #' Subset a survey list to waves present in an existing CWT
 #'
-#' Filters `survey_data` to retain only the waves whose `study_wave` values
+#' Filters `my_survey_list` to retain only the waves whose `study_wave` values
 #' appear in `cwt`. Warns if the CWT references waves absent from the survey.
 #'
-#' @param survey_data Named list of survey data frames.
+#' @param my_survey_list Named list of survey data frames.
 #' @param cwt A CWT data frame with a `study_wave` column.
 #' @param verbose Logical. Print a warning for missing waves? Default `TRUE`.
 #'
 #' @return A filtered named list of survey data frames.
 #' @keywords internal
-align_survey_to_cwt <- function(survey_data, cwt, verbose = TRUE) {
+align_survey_to_cwt <- function(my_survey_list, cwt, verbose = TRUE) {
   waves_cwt    <- tolower(unique(cwt$study_wave))
-  waves_survey <- tolower(names(survey_data))
-  filtered     <- survey_data[waves_survey %in% waves_cwt]
+  waves_survey <- tolower(names(my_survey_list))
+  filtered     <- my_survey_list[waves_survey %in% waves_cwt]
 
   missing_waves <- setdiff(waves_cwt, waves_survey)
   if (length(missing_waves) > 0 && verbose) {
-    warning("These CWT waves are not present in survey_data: ",
-            paste(missing_waves, collapse = ", "), call. = FALSE)
+    warning(
+      "These CWT waves are not present in my_survey_list: ",
+      paste(missing_waves, collapse = ", "),
+      call. = FALSE
+    )
   }
 
   filtered
@@ -88,24 +98,33 @@ align_survey_to_cwt <- function(survey_data, cwt, verbose = TRUE) {
 #'   yet present in the CWT.
 #' @keywords internal
 find_missing_vars <- function(cwt, variable_map, has_waves) {
-
   if (has_waves) {
 
-    variable_map$src_var    <- toupper(variable_map$src_var)
-    variable_map$study_wave <- as.character(variable_map$study_wave)
+    variable_map$src_var    <- tolower(variable_map$src_var)
+    variable_map$study_wave <- tolower(as.character(variable_map$study_wave))
 
     cwt_vars <- data.frame(
-      src_var    = toupper(cwt$var_name),
-      study_wave = as.character(cwt$study_wave),
+      src_var    = tolower(cwt$var_name),
+      study_wave = tolower(as.character(cwt$study_wave)),
       stringsAsFactors = FALSE
     )
 
-    dplyr::anti_join(variable_map, cwt_vars, by = c("study_wave", "src_var"))
+    dplyr::anti_join(variable_map, cwt_vars,
+                     by = c("study_wave", "src_var"))
 
   } else {
 
-    missing <- setdiff(toupper(variable_map$src_var), toupper(unique(cwt$var_name)))
-    out     <- variable_map[toupper(variable_map$src_var) %in% missing, , drop = FALSE]
+    missing <- setdiff(
+      tolower(variable_map$src_var),
+      tolower(unique(cwt$var_name))
+    )
+
+    out <- variable_map[
+      tolower(variable_map$src_var) %in% missing,
+      ,
+      drop = FALSE
+    ]
+
     out[!is.na(out$src_var), ]
   }
 }

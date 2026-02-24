@@ -45,18 +45,8 @@ format_value_labels <- function(var_values, var_name, wave_name, verbose = TRUE)
         cat("NOTE: More observed values than Stata labels for variable:", var_name,
             "in dataset:", wave_name, "- combining observed values with Stata labels.\n")
 
-      # observed values not covered by Stata labels
-      extra_obs  <- setdiff(labels_obs, stata_codes)
-      obs_fmt    <- paste0("[", extra_obs, "] ", extra_obs)
-
-      # strip leading numeric codes from Stata label text (e.g. "1. Yes" -> "Yes")
-      label_text <- gsub("^\\s*[-+]?\\d+(?:\\.\\d+)?\\s*\\.\\s*", "", names(labels))
-      stata_fmt  <- paste0("[", stata_codes, "] ", label_text)
-
       # combine and re-sort by numeric code
-      label_formatted <- c(obs_fmt, stata_fmt)
-      codes           <- as.numeric(sub("^\\[(-?\\d+)\\].*", "\\1", label_formatted))
-      label_formatted <- label_formatted[order(codes)]
+      label_formatted <- .merge_obs_stata(labels_obs, stata_codes, labels)
       code_formatted  <- c(labels_obs, setdiff(stata_codes, labels_obs))
 
       # Case 2b: Stata labels fully cover observed values — use labels as-is ----
@@ -66,7 +56,7 @@ format_value_labels <- function(var_values, var_name, wave_name, verbose = TRUE)
         cat("NOTE: Using Stata value labels for variable:", var_name,
             "in dataset:", wave_name, "- observed values fully covered by labels.\n")
 
-      label_text      <- gsub("^\\s*[-+]?\\d+(?:\\.\\d+)?\\s*\\.\\s*", "", names(labels))
+      label_text      <- .strip_stata_prefix(names(labels))
       label_formatted <- paste0("[", stata_codes, "] ", label_text)
       code_formatted  <- stata_codes
     }

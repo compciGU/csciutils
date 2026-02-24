@@ -1,19 +1,40 @@
 #' Validate inputs to create_cwt
 #'
-#' Checks that `survey_data` is a named list and that `variable_map` contains
+#' Checks that `my_survey_list` is a named list and that `variable_map` contains
 #' the required columns. Warns if any `study_wave` values in `variable_map`
-#' have no corresponding entry in `survey_data`.
+#' have no corresponding entry in `my_survey_list`.
 #'
-#' @param survey_data A named list of survey data frames.
+#' @param my_survey_list A named list of survey data frames.
 #' @param variable_map A data frame with columns `src_var`, `target_var`, and
 #'   `study_wave`.
 #'
 #' @return `TRUE` invisibly. Called for its side effects (errors/warnings).
 #' @keywords internal
-validate_create_cwt <- function(survey_data, variable_map) {
+validate_create_cwt <- function(my_survey_list, variable_map) {
 
-  if (!is.list(survey_data) || is.null(names(survey_data))) {
-    stop("`survey_data` must be a named list of data frames.", call. = FALSE)
+  if (!is.list(my_survey_list) || is.null(names(my_survey_list))) {
+    stop("`my_survey_list` must be a named list of data frames.", call. = FALSE)
+  }
+
+  var_map_clean <- variable_map[!variable_map$src_var %in% c("-999", "-99", "999", "99"),]
+
+  duplicates <- duplicated(var_map_clean[c("study_wave", "src_var")]) | duplicated(var_map_clean[c("study_wave", "src_var")],fromLast = TRUE) # duplicates per wave and flag both duplicates
+
+  if (any(duplicates)) {
+
+    dup_rows <- var_map_clean[duplicates, c("study_wave", "src_var", "target_var")]
+
+    stop(paste(
+        "The (study_wave, src_var, target_var) mapping in `variable_map` must be unique.",
+        "Duplicate rows found:",
+        paste(
+          apply(dup_rows, 1, paste, collapse = " | "),
+          collapse = "\n"
+        ),
+        sep = "\n"
+      ),
+      call. = FALSE
+    )
   }
 
   required_cols <- c("src_var", "target_var", "study_wave")
@@ -25,11 +46,14 @@ validate_create_cwt <- function(survey_data, variable_map) {
 
   unmatched_waves <- setdiff(
     unique(tolower(variable_map$study_wave)),
-    tolower(names(survey_data))
+    tolower(names(my_survey_list))
   )
   if (length(unmatched_waves) > 0) {
-    warning("These study_wave values in `variable_map` have no match in `survey_data`: ",
-            paste(unmatched_waves, collapse = ", "), call. = FALSE)
+    warning(
+      "These study_wave values in `variable_map` have no match in `my_survey_list`: ",
+      paste(unmatched_waves, collapse = ", "),
+      call. = FALSE
+    )
   }
 
   invisible(TRUE)
@@ -38,18 +62,18 @@ validate_create_cwt <- function(survey_data, variable_map) {
 #' Validate inputs to append_item
 #'
 #' Checks that `cwt` contains the required columns, delegates to
-#' [validate_create_cwt()] for `survey_data` and `variable_map`, and ensures
+#' [validate_create_cwt()] for `my_survey_list` and `variable_map`, and ensures
 #' the output directory exists (creating it if needed).
 #'
 #' @param cwt An existing CWT data frame.
-#' @param survey_data A named list of survey data frames.
+#' @param my_survey_list A named list of survey data frames.
 #' @param variable_map A variable mapping data frame.
 #' @param output_dir Root output directory.
 #' @param output_subdir Sub-directory relative to `output_dir`.
 #'
 #' @return `TRUE` invisibly. Called for its side effects (errors/warnings).
 #' @keywords internal
-validate_append_item <- function(cwt, survey_data, variable_map,
+validate_append_item <- function(cwt, my_survey_list, variable_map,
                                  output_dir, output_subdir) {
 
   required_cols <- c("var_name", "study_wave", "target_var")
@@ -59,7 +83,7 @@ validate_append_item <- function(cwt, survey_data, variable_map,
          paste(missing_cols, collapse = ", "), call. = FALSE)
   }
 
-  validate_create_cwt(survey_data, variable_map)
+  validate_create_cwt(my_survey_list, variable_map)
 
   if (!dir.exists(output_dir)) {
     stop("`output_dir` does not exist: ", output_dir, call. = FALSE)
