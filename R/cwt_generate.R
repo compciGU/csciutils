@@ -54,7 +54,7 @@
 #'   variable_map = new_mapping
 #' )
 #' }
-#'  @export
+#' @export
 generate_cwt <- function(cwt = NULL,
                          my_survey_list,
                          variable_map,

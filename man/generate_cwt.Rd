@@ -81,5 +81,4 @@ cwt_updated <- generate_cwt(
   variable_map = new_mapping
 )
 }
- @export
 }
