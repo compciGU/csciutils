@@ -60,7 +60,7 @@ create_survey_list <- function(conn,
 
     tryCatch(
       {
-        cat("Reading dataset:", tag, "(ID:", id, ")\n")
+        cat(sprintf("Reading dataset '%s' (dataset_id: %s)...\n", tag, id))
 
         df <- read_survey_data(conn = conn,
                                tag = tag,
@@ -71,11 +71,11 @@ create_survey_list <- function(conn,
 
         surveys[[tag]] <- df
 
-        cat("Successfully loaded:", tag, "\n\n")
+        cat(sprintf("Successfully loaded dataset '%s'.\n\n", tag))
       },
       error = function(e) {
-        cat("ERROR loading", tag, "(ID:", id,"):\n")
-        cat("  ", conditionMessage(e), "\n\n")
+        cat(sprintf("Failed to load dataset '%s' (dataset_id: %s).\n", tag, id))
+        cat(sprintf("  Error: %s\n\n", conditionMessage(e)))
         surveys[[tag]] <- NULL
       }
     )

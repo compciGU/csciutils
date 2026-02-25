@@ -60,8 +60,9 @@ generate_cwt <- function(cwt = NULL,
                          variable_map,
                          save_file = TRUE,
                          dir = Sys.getenv("ROOT_DIR"),
-                         out_dir = "cwt_swd/cwts_final",
-                         file_suffix = "_cwt_finalized",
+                         out_dir = "cwts/cwts_appended",
+                         file_prefix = NULL,
+                         file_suffix = "_cwt_appended",
                          align_surveys_with_cwt = FALSE,
                          verbose = TRUE) {
 
@@ -77,7 +78,7 @@ generate_cwt <- function(cwt = NULL,
         cwt = cwt,
         output_dir = dir,
         output_subdir = out_dir,
-        file_prefix = variable_map$study_wave[1],
+        file_prefix = NULL,
         file_suffix = file_suffix
       )
 
@@ -103,7 +104,7 @@ generate_cwt <- function(cwt = NULL,
         cwt = cwt,
         output_dir = dir,
         output_subdir = out_dir,
-        file_prefix = variable_map$study_wave[1],
+        file_prefix = NULL,
         file_suffix = file_suffix
       )
 
@@ -128,7 +129,7 @@ generate_cwt <- function(cwt = NULL,
       cwt = cwt_bind,
       output_dir = dir,
       output_subdir = out_dir,
-      file_prefix = vars_missing_df$study_wave[1],
+      file_prefix = NULL,
       file_suffix = file_suffix
     )
 

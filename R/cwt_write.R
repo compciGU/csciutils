@@ -31,7 +31,7 @@ save_cwt <- function(cwt,
       stop("`file_prefix` is NULL and `cwt$study_wave[1]` is missing; cannot derive a file name.",
            call. = FALSE)
     }
-    file_prefix <- sub("_.*$", "", tolower(cwt$study_wave[1]))
+    file_prefix <- tolower(sub("_.*$", "", cwt$study_wave[1]))
   }
 
   # resolve output path -------------------------------------------------------

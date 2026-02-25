@@ -10,8 +10,9 @@ generate_cwt(
   variable_map,
   save_file = TRUE,
   dir = Sys.getenv("ROOT_DIR"),
-  out_dir = "cwt_swd/cwts_final",
-  file_suffix = "_cwt_finalized",
+  out_dir = "cwts/cwts_appended",
+  file_prefix = NULL,
+  file_suffix = "_cwt_appended",
   align_surveys_with_cwt = FALSE,
   verbose = TRUE
 )
