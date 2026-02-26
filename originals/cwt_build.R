@@ -26,15 +26,13 @@
 #' @export
 build_cwt <- function(my_survey_list, variable_map, verbose = TRUE) {
 
-  variable_map  <- variable_map[!variable_map$src_var %in% c("-999", "-99", "999", "99"),] # filter for placeholder -> move this filtering step to get_annnotations function so do_groundwork works
-
-  validate_create_cwt(my_survey_list, variable_map)                                         # find helper function in cwt_validate_input script
+  validate_create_cwt(my_survey_list, variable_map)
 
   labels_list <- list()
   index       <- 1
 
   for (n in names(my_survey_list)) {
-    message(paste("Survey:", n, "\n"))
+    cat("Survey:", n, "\n")
 
     dataset    <- my_survey_list[[n]]
     study_wave <- n
@@ -58,9 +56,9 @@ build_cwt <- function(my_survey_list, variable_map, verbose = TRUE) {
 
       vec <- dataset_filtered[[v]]
 
-      fmt <- format_value_labels(vec, v, study_wave)      # find helper function in cwt_format_labels
+      fmt <- format_value_labels(vec, v, study_wave)      # utils_labels
 
-      n_obs_fmt <- count_obs(                             # find helper function in cwt_format_labels
+      n_obs_fmt <- count_obs(
         vec,
         fmt$code_formatted,
         fmt$label_formatted
@@ -83,8 +81,8 @@ build_cwt <- function(my_survey_list, variable_map, verbose = TRUE) {
   }
 
   cwt <- dplyr::bind_rows(labels_list)
-  cwt <- collapse_tech_vars(cwt)          # find helper function in cwt_align_vars
-  check_missing_vars(cwt, variable_map)   # find helper function in cwt_align_vars
+  cwt <- collapse_tech_vars(cwt)
+  check_missing_vars(cwt, variable_map)
 
   cwt
 }

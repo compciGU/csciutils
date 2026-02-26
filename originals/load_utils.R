@@ -21,16 +21,14 @@
 #' surveys <- create_survey_list(conn, proj = "eb")
 #' }
 #' @export
-get_survey_list <- function(conn,
-                               table = "datasets",
+create_survey_list <- function(conn,
                                proj = NULL,
                                include_dataset_id = TRUE,
                                use_original = TRUE,
                                verbose = TRUE) {
 
 
-  sql <- paste0("SELECT * FROM ", table, ";")
-  datasets <- DBI::dbGetQuery(conn, sql)
+  datasets <- DBI::dbGetQuery(conn, "SELECT * FROM datasets;")
 
   required_cols <- c("tag", "dataset_id")
   missing_cols  <- setdiff(required_cols, names(datasets))
@@ -46,13 +44,12 @@ get_survey_list <- function(conn,
            call. = FALSE)
     }
 
-    datasets <- datasets[tolower(datasets$proj) %in% tolower(proj), , drop = FALSE]
+    keep <- tolower(datasets$proj) %in% tolower(proj)
+    datasets <- datasets[keep, , drop = FALSE]
   }
 
-
-  datasets <- datasets[ !is.na(datasets$tag) & datasets$tag != "" & !is.na(datasets$dataset_id), , drop = FALSE]
-  tags        <- datasets$tag
-  dataset_ids <- datasets$dataset_id
+  tags        <- datasets$tag[!is.na(datasets$tag)]
+  dataset_ids <- datasets$dataset_id[!is.na(datasets$dataset_id)]
 
   surveys <- list()
 
@@ -63,7 +60,7 @@ get_survey_list <- function(conn,
 
     tryCatch(
       {
-        message(sprintf("Reading dataset '%s' (dataset_id: %s)...", tag, id))
+        cat(sprintf("Reading dataset '%s' (dataset_id: %s)...\n", tag, id))
 
         df <- read_survey_data(conn = conn,
                                tag = tag,
@@ -74,11 +71,11 @@ get_survey_list <- function(conn,
 
         surveys[[tag]] <- df
 
-        message(sprintf("Successfully loaded dataset '%s'.\n", tag))
+        cat(sprintf("Successfully loaded dataset '%s'.\n\n", tag))
       },
       error = function(e) {
-        message(sprintf("Failed to load dataset '%s' (dataset_id: %s).", tag, id))
-        message(sprintf("  Error: %s\n", conditionMessage(e)))
+        cat(sprintf("Failed to load dataset '%s' (dataset_id: %s).\n", tag, id))
+        cat(sprintf("  Error: %s\n\n", conditionMessage(e)))
         surveys[[tag]] <- NULL
       }
     )
@@ -120,57 +117,63 @@ get_survey_list <- function(conn,
 #' cwts <- read_cwts(proj = "evs")
 #' }
 #' @export
-get_cwts <- function(dir_cwts = file.path(Sys.getenv("ROOT_DIR"), "cwt_swd", "cwt_swd_aligned"),
+read_cwts <- function(dir = file.path(Sys.getenv("ROOT_DIR"), "cwt_swd", "cwt_swd_aligned"),
                       proj = NULL,
                       pattern = "\\.(xlsx|csv|ods)$",
-                      name_extension = FALSE,
+                      full_names = FALSE,
                       to_global_env = FALSE,
                       verbose = TRUE) {
 
-  if (!dir.exists(dir_cwts)) {
-    stop("CWT directory does not exist: ", dir_cwts, call. = FALSE)
+  if (!dir.exists(dir)) {
+    stop("CWT directory does not exist: ", dir, call. = FALSE)
   }
 
-  cwt_files <- list.files(dir_cwts, pattern = pattern, full.names = TRUE)
+  cwt_files <- list.files(dir, pattern = pattern, full.names = TRUE)
 
   if (length(cwt_files) == 0) {
-    if (verbose) message("No CWT files found in:", dir_cwts, "\n")
+    if (verbose) cat("No CWT files found in:", dir, "\n")
     return(list())
   }
 
   if (!is.null(proj)) {
 
     base_names <- basename(cwt_files)
-    pattern_proj <- paste0("^(", paste(tolower(proj), collapse = "|"), ")_")
-    cwt_files <- cwt_files[grepl(pattern_proj, tolower(base_names))]
-  }
+    keep <- rep(FALSE, length(base_names))
 
+    for (p in proj) {
+      keep <- keep | grepl(paste0("^", tolower(p), "_"),
+                           tolower(base_names))
+    }
+
+    cwt_files <- cwt_files[keep]
+  }
 
   cwts <- list()
 
   for (f in cwt_files) {
-    base_name <- basename(f)
-    name_file <- sub("\\.(xlsx|csv|ods)$", "", base_name, ignore.case = TRUE) # clean file name to store in list
+
+    f_base <- basename(f)
+    f_name <- sub("\\.(xlsx|csv|ods)$", "", f_base, ignore.case = TRUE)
 
     tryCatch(
       {
-        if (verbose) message(paste("Reading CWT file:", base_name))
-        cwts[[name_file]] <- read_file(f)
+        if (verbose) cat("Reading CWT file:", f_base, "\n")
+        cwts[[f_name]] <- read_file(f)
       },
       error = function(e) {
         if (verbose) {
-          message(paste("ERROR reading", base_name, ":"))
-          message(paste("  ", conditionMessage(e), "\n"))
+          cat("ERROR reading", f_base, ":\n")
+          cat("  ", conditionMessage(e), "\n\n")
         }
         cwts[[f_name]] <- NULL
       }
     )
   }
 
-  if (!name_extension) {
+  if (!full_names) {
     # keep list names as base file names without extension (current behavior)
   } else {
-    names(cwts) <- file.path(dir_cwts, paste0(names(cwts)))
+    names(cwts) <- file.path(dir, paste0(names(cwts)))
   }
 
   if (to_global_env)

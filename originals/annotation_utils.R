@@ -23,7 +23,7 @@
 #' vars_lu <- create_vars_lookup(surveys, include_dataset_id = TRUE)
 #' }
 #' @export
-get_vars_lookup <- function(my_survey_list,
+create_vars_lookup <- function(my_survey_list,
                                include_dataset_id = TRUE,
                                verbose = TRUE) {
 
@@ -45,19 +45,15 @@ get_vars_lookup <- function(my_survey_list,
 
     var_names  <- names(data)
 
-  var_labels <- vapply(var_names, function(x){
-    label <- attr(data[[x]], "label")
-    if (is.null(label)) {
-      ""
-    } else if (length(label) > 1) {
-      stop(paset0("Column `", x, "` has more than one label."), call. = FALSE)
-    } else {
-      as.character(label)[1]
+    var_labels <- character(length(var_names))
+    for (j in seq_along(var_names)) {
+      label <- attr(data[[j]], "label")
+      if (is.null(label)) {
+        var_labels[j] <- ""
+      } else {
+        var_labels[j] <- as.character(label)[1]
+      }
     }
-    },
-    character(1)
-  )
-
 
     if (include_dataset_id) {
 
@@ -129,19 +125,16 @@ get_vars_lookup <- function(my_survey_list,
 #' )
 #' }
 #' @export
-get_annotations <- function(conn,
-                              proj,
-                              table = "src_annotations",
+query_annotations <- function(conn,
+                              table,
                               id_cols = c("dataset_id", "study_wave"),
                               split_separators = "\\s*[;,]\\s*",
                               format = c("long", "wide"),
-                              missing_values = c("-999", "-99", "999", "99"),
                               verbose = TRUE) {
 
   format <- match.arg(format)
 
-  ann_table <- paste(proj, table, sep = "_")
-  sql <- paste0("SELECT * FROM ", ann_table, ";")
+  sql <- paste0("SELECT * FROM ", table, ";")
   ann <- DBI::dbGetQuery(conn, sql)
 
   missing_cols <- setdiff(id_cols, names(ann))
@@ -152,7 +145,7 @@ get_annotations <- function(conn,
 
   if (format == "wide") {
     if (verbose)
-      message(paste("Loaded", nrow(ann), "row(s) from", table, "in wide format\n"))
+      cat("Loaded", nrow(ann), "row(s) from", table, "in wide format\n")
     return(ann)
   }
 
@@ -161,16 +154,20 @@ get_annotations <- function(conn,
     stop("No columns left to pivot after removing id_cols.", call. = FALSE)
   }
 
-
   # pivot to long (base R) ----------------------------------------------------
   id_df <- ann[id_cols]
+  long_list <- vector("list", length(value_cols))
+  idx <- 1
 
-  long_list <- lapply(value_cols, function(col) {
+  for (col in value_cols) {
+
     out <- id_df
     out$target_var <- col
-    out$src_var <- ann[[col]]
-    out
-  })
+    out$src_var    <- ann[[col]]
+
+    long_list[[idx]] <- out
+    idx <- idx + 1
+  }
 
   ann_long <- do.call(rbind, long_list)
 
@@ -178,7 +175,6 @@ get_annotations <- function(conn,
   ann_long$src_var <- trimws(as.character(ann_long$src_var))
   keep <- !is.na(ann_long$src_var) & ann_long$src_var != ""
   ann_long <- ann_long[keep, , drop = FALSE]
-
 
   if (nrow(ann_long) > 0) {
 
@@ -197,15 +193,8 @@ get_annotations <- function(conn,
   rownames(ann_long) <- NULL
 
   if (verbose)
-    message(paste("Loaded", nrow(ann_long), "annotation mapping row(s) from",
-        table, "in long format"))
-
-
-  # filter for placeholder and missing values --------------------------------------
-  if (!is.null(missing_values)){
-    src_chr <- trimws(as.character(ann_long$src_var))
-    ann_long <- ann_long[!(src_chr %in% trimws(as.character(missing_values))), , drop = FALSE]
-  }
+    cat("Loaded", nrow(ann_long), "annotation mapping row(s) from",
+        table, "in long format\n")
 
   ann_long
 }

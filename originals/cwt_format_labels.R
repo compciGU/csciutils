@@ -25,8 +25,8 @@ format_value_labels <- function(var_values, var_name, wave_name, verbose = TRUE)
   if (is.null(labels) || all(is.na(labels))) {
 
     if (verbose)
-      message(paste("NOTE: No Stata value labels found for variable:", var_name,
-          "in dataset:", wave_name, "- using observed values instead."))
+      cat("NOTE: No Stata value labels found for variable:", var_name,
+          "in dataset:", wave_name, "- using observed values instead.\n")
 
     label_formatted <- paste0("[", labels_obs, "] ", labels_obs)
     code_formatted  <- labels_obs
@@ -42,8 +42,8 @@ format_value_labels <- function(var_values, var_name, wave_name, verbose = TRUE)
     if (length(unique(labels_obs)) > length(unique(stata_codes))) {
 
       if (verbose)
-        message(paste("NOTE: More observed values than Stata labels for variable:", var_name,
-            "in dataset:", wave_name, "- combining observed values with Stata labels."))
+        cat("NOTE: More observed values than Stata labels for variable:", var_name,
+            "in dataset:", wave_name, "- combining observed values with Stata labels.\n")
 
       # combine and re-sort by numeric code
       label_formatted <- .merge_obs_stata(labels_obs, stata_codes, labels)
@@ -53,8 +53,8 @@ format_value_labels <- function(var_values, var_name, wave_name, verbose = TRUE)
     } else {
 
       if (verbose)
-        message(paste("NOTE: Using Stata value labels for variable:", var_name,
-            "in dataset:", wave_name, "- observed values fully covered by labels."))
+        cat("NOTE: Using Stata value labels for variable:", var_name,
+            "in dataset:", wave_name, "- observed values fully covered by labels.\n")
 
       label_text      <- .strip_stata_prefix(names(labels))
       label_formatted <- paste0("[", stata_codes, "] ", label_text)

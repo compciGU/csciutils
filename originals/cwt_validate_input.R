@@ -16,12 +16,13 @@ validate_create_cwt <- function(my_survey_list, variable_map) {
     stop("`my_survey_list` must be a named list of data frames.", call. = FALSE)
   }
 
+  var_map_clean <- variable_map[!variable_map$src_var %in% c("-999", "-99", "999", "99"),]
 
-  duplicates <- duplicated(variable_map[c("study_wave", "src_var")]) | duplicated(variable_map[c("study_wave", "src_var")],fromLast = TRUE) # duplicates per wave and flag both duplicates
+  duplicates <- duplicated(var_map_clean[c("study_wave", "src_var")]) | duplicated(var_map_clean[c("study_wave", "src_var")],fromLast = TRUE) # duplicates per wave and flag both duplicates
 
   if (any(duplicates)) {
 
-    dup_rows <- variable_map[duplicates, c("study_wave", "src_var", "target_var")]
+    dup_rows <- var_map_clean[duplicates, c("study_wave", "src_var", "target_var")]
 
     stop(paste(
         "The (study_wave, src_var, target_var) mapping in `variable_map` must be unique.",
@@ -90,7 +91,7 @@ validate_append_item <- function(cwt, my_survey_list, variable_map,
 
   full_output_path <- file.path(output_dir, output_subdir)
   if (!dir.exists(full_output_path)) {
-    message(paste("Creating output directory:", full_output_path))
+    message("Creating output directory: ", full_output_path)
     dir.create(full_output_path, recursive = TRUE)
   }
 

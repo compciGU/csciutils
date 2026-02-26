@@ -44,10 +44,10 @@ check_missing_vars <- function(cwt, variable_map, verbose = TRUE) {
   )
 
   if (length(missing) > 0 && verbose) {
-    message(paste(
+    cat(
       "NOTE: These variable_map variables were not found in the survey data:",
       paste(missing, collapse = ", "),
-      "-> Please double-check src_var names.")
+      "\nPlease double-check src_var names.\n"
     )
   }
 
