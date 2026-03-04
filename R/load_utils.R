@@ -22,35 +22,55 @@
 #' }
 #' @export
 get_survey_list <- function(conn,
-                               table = "datasets",
-                               proj = NULL,
-                               include_dataset_id = TRUE,
-                               use_original = TRUE,
-                               verbose = TRUE) {
+                            # If you specify proj as the second argument, you can call the function by just writing get_survey_list(conn, "evs")
+                            proj,
+                            table = "datasets",
+                            include_dataset_id = TRUE,
+                            # We do not need this argument for the function, as it is part of read_survey_data
+                            # use_original = TRUE,
+                            verbose = TRUE) {
 
+  # Let's go with query instead of sql as it is more descriptive of what the object is.
+  # We can also filter for proj here and save the lines of code further down.
 
-  sql <- paste0("SELECT * FROM ", table, ";")
-  datasets <- DBI::dbGetQuery(conn, sql)
+  #query <- paste0("SELECT * FROM ", table, ";")
+  #datasets <- DBI::dbGetQuery(conn, query)
 
+  #We can write this more compact with a stopifnot statement
+  #required_cols <- c("tag", "dataset_id")
+  #missing_cols  <- setdiff(required_cols, names(datasets))
+  #if (length(missing_cols) > 0) {
+  #  stop("`datasets` is missing required columns: ",
+  #       paste(missing_cols, collapse = ", "), call. = FALSE)
+  #}
+
+  #This does not do what you want it to do. It checks if proj is a column in datasets. Instead of the column names in datasets you need to loop through the unique values for proj, check code below
+  #if (!is.null(proj)) {
+  #
+  #  if (!("proj" %in% names(datasets))) {
+  #    stop("`proj` was supplied but column `proj` was not found in `datasets`.",
+  #         call. = FALSE)
+  #  }
+
+  # Do we need tolower? I think the general rule for lower case and the additional stopifnot for the proj value should be enough
+  # To make sure that proj is not missing, we can add a NOT NULL constraint to the proj column in the database, i.e. adress the problem as early as possible.
+  # That said and filtering for proj in query make these two lines redundant. 
+
+  #datasets <- datasets[tolower(datasets$proj) %in% tolower(proj), , drop = FALSE]
+  #datasets <- datasets[ !is.na(datasets$tag) & datasets$tag != "" & !is.na(datasets$dataset_id), , drop = FALSE]
+  
+  # Here is my suggestion:
+  query <- paste0("SELECT * FROM ", table, " WHERE proj = '", proj, "';")
+  datasets <- DBI::dbGetQuery(conn, query)
+  
   required_cols <- c("tag", "dataset_id")
-  missing_cols  <- setdiff(required_cols, names(datasets))
-  if (length(missing_cols) > 0) {
-    stop("`datasets` is missing required columns: ",
-         paste(missing_cols, collapse = ", "), call. = FALSE)
-  }
-
-  if (!is.null(proj)) {
-
-    if (!("proj" %in% names(datasets))) {
-      stop("`proj` was supplied but column `proj` was not found in `datasets`.",
-           call. = FALSE)
-    }
-
-    datasets <- datasets[tolower(datasets$proj) %in% tolower(proj), , drop = FALSE]
-  }
-
-
-  datasets <- datasets[ !is.na(datasets$tag) & datasets$tag != "" & !is.na(datasets$dataset_id), , drop = FALSE]
+  stopifnot("Required columns missing from datasets table: 'tag' and/or 'dataset_id'" = 
+              all(required_cols %in% names(datasets)))
+  
+  print(proj)
+  stopifnot("Specified project does not exist in datasets table. Check the value for proj." = 
+                proj %in% unique(datasets$proj))
+  
   tags        <- datasets$tag
   dataset_ids <- datasets$dataset_id
 
@@ -65,9 +85,9 @@ get_survey_list <- function(conn,
       {
         message(sprintf("Reading dataset '%s' (dataset_id: %s)...", tag, id))
 
-        df <- read_survey_data(conn = conn,
-                               tag = tag,
-                               use_original = use_original)
+        # Changed the value for use_original to TRUE as this is the default value in read_survey_data and it is what we want to use here, so no need to pass it as an argument to this function
+        # Also, just using conn and tag is enough, no specification needed
+        df <- read_survey_data(conn, tag, use_original = TRUE)
 
         if (include_dataset_id)
           df$dataset_id <- id
