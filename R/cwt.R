@@ -1,3 +1,4 @@
+
 # User level CWT functions ----
 
 ## Bind CWTS if stored seperatly in file system ----
@@ -453,7 +454,7 @@ collapse_tech_vars <- function(cwt) {
   rbind(cwt_sub, cwt_tech)
 }
 
-## Dormat helper functions ----
+## Format helper functions ----
 
 format_value_labels <- function(var_values, var_name, wave_name, verbose = TRUE) {
 

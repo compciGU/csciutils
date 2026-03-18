@@ -1,5 +1,5 @@
 
-## Load Surveys as List object ----
+# Load Surveys as List object ----
 
 load_survey_list <- function(conn, proj) {
 
@@ -50,7 +50,7 @@ load_survey_list <- function(conn, proj) {
 }
 
 
-## Load CWTs ----
+# Load CWTs ----
 
 # Should we add a "status" argument to decide which cwt to load? I.e., aligned,
 # appeneded or recoded?
@@ -132,7 +132,7 @@ load_cwt <- function(proj, status = "appended") {
 
 
 
-## Load Annotations from DB ----
+# Load Annotations from DB ----
 
 load_annotations <- function(conn, proj, reshape = FALSE) {
 
@@ -205,16 +205,23 @@ load_annotations <- function(conn, proj, reshape = FALSE) {
 
 
 
-## Get Variable lookup ----
+# Get Variable lookup ----
 
 
-get_vars_lookup <- function(proj,
-                            include_dataset_id = TRUE,
-                            verbose = TRUE) {
+get_vars_lookup <- function(conn,
+                            proj,
+                            include_dataset_id = TRUE) {
 
+  # Constants
   PROJ <-  match.arg(proj, choices = c("ases", "cceb", "cdcee", "cses", "eb", "eqls", "ess", "evs",
                                        "intune", "issp", "lits", "nbb", "neb", "wvs"), several.ok = TRUE)
 
+
+  # Load survey here
+  my_survey_list <- get_survey_list(conn = conn, proj = PROJ)
+
+  # Validations
+  #stopifnot
 
 
   if (!is.list(my_survey_list) || is.null(names(my_survey_list))) {
@@ -240,7 +247,7 @@ get_vars_lookup <- function(proj,
       if (is.null(label)) {
         ""
       } else if (length(label) > 1) {
-        stop(paset0("Column `", x, "` has more than one label."), call. = FALSE)
+        stop(paste0("Column `", x, "` has more than one label."), call. = FALSE)
       } else {
         as.character(label)[1]
       }
@@ -276,7 +283,7 @@ get_vars_lookup <- function(proj,
       )
     }
 
-    lookup_list[[length(lookup_list) + 1]] <- survey_lookup
+    lookup_list[[i]] <- survey_lookup
   }
 
   all_vars_lookup_table <- do.call(rbind, lookup_list)
