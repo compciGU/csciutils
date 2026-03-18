@@ -115,7 +115,16 @@ write_cwt <- function(cwt, proj = NULL, split = FALSE, ...) {    # if you want t
 
 
   # Build (split) data list and file paths
-  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S") #timestamp must be set to local pc and reverted after existing the function
+  #Hrdley Whickeh proposes something like this: -> could be another helper function
+  # use the tz argument to format.POSIXct()
+  # timestamp <- function(time = Sys.time()) {
+  #   withr::local_locale(c("LC_TIME" = "C"))
+  #   format(time, "%Y-%B-%d_%H-%M-%S", tz = "UTC") # also add argument to reverse when exiting the function
+  # }
+
+
+
 
   if (!isFALSE(SPLIT)) {
     # split them in groups
