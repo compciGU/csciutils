@@ -207,89 +207,100 @@ load_annotations <- function(conn, proj, reshape = FALSE) {
 
 # Get Variable lookup ----
 
+load_var_validations <- function(
+    conn,
+    proj            = NULL,
+    my_survey_list  = NULL,
+    include_validations = c("dataset_id", "t_annotations")
+) {
+  # Validate
+  VALID_PROJS <- c("ases", "cceb", "cdcee", "cses", "eb", "eqls", "ess", "evs",
+                   "intune", "issp", "lits", "nbb", "neb", "wvs")
 
-get_vars_lookup <- function(conn,
-                            proj,
-                            include_dataset_id = TRUE) {
+  stopifnot(
+    "Either `proj` or `my_survey_list` must be specified."  = !is.null(proj) || !is.null(my_survey_list),
+    "`my_survey_list` must be a named list of data frames." = is.null(my_survey_list) || (is.list(my_survey_list) && !is.null(names(my_survey_list)))
+  )
 
-  # Constants
-  PROJ <-  match.arg(proj, choices = c("ases", "cceb", "cdcee", "cses", "eb", "eqls", "ess", "evs",
-                                       "intune", "issp", "lits", "nbb", "neb", "wvs"), several.ok = TRUE)
-
-
-  # Load survey here
-  my_survey_list <- get_survey_list(conn = conn, proj = PROJ)
-
-  # Validations
-  #stopifnot
-
-
-  if (!is.list(my_survey_list) || is.null(names(my_survey_list))) {
-    stop("`my_survey_list` must be a named list of data frames.", call. = FALSE)
+  if (!is.null(proj)) {
+    proj <- match.arg(proj, choices = VALID_PROJS)
   }
 
-  lookup_list <- list()
+  if (!is.null(my_survey_list)) {
+    proj <- sub("_.*", "", names(my_survey_list)[1])
+  } else {
+    stop("Loading survey data from `proj` alone is not yet implemented.", call. = FALSE)
+  }
+
+  VALIDATORS <- match.arg(include_validations,
+                          choices = c("dataset_id", "t_annotations"),
+                          several.ok = TRUE)
+
+  use_dataset_id  <- "dataset_id"    %in% VALIDATORS
+  use_annotations <- "t_annotations" %in% VALIDATORS
+
+  # Load annotations
+  if (use_annotations) {
+    annotations <- load_annotations(conn = conn, proj = proj, reshape = TRUE)
+    char_cols <- vapply(annotations, is.character, logical(1))
+    annotations[char_cols] <- lapply(annotations[char_cols], tolower)
+  }
+
+  # Build one lookup table per survey
+  lookup_list <- vector("list", length(my_survey_list))
 
   for (i in seq_along(my_survey_list)) {
-
     survey_tag <- names(my_survey_list)[i]
     data       <- my_survey_list[[i]]
 
-    if (is.null(data)) {
-      if (verbose) cat("Skipping NULL survey:", survey_tag, "\n")
-      next
+    if (is.null(data)) next
+
+    if (!is.data.frame(data)) {
+      stop(paste0("Survey `", survey_tag, "` is not a data frame."), call. = FALSE)
+    }
+    if (use_dataset_id && !"dataset_id" %in% names(data)) {
+      stop(paste0("`dataset_id` column not found in survey `", survey_tag, "`."), call. = FALSE)
     }
 
-    var_names  <- names(data)
-
-    var_labels <- vapply(var_names, function(x){
-      label <- attr(data[[x]], "label")
-      if (is.null(label)) {
-        ""
-      } else if (length(label) > 1) {
-        stop(paste0("Column `", x, "` has more than one label."), call. = FALSE)
-      } else {
-        as.character(label)[1]
+    # Extract variable labels
+    var_labels <- vapply(names(data), function(col) {
+      label <- attr(data[[col]], "label")
+      if (is.null(label)) return("")
+      if (length(label) > 1) {
+        stop(paste0("Column `", col, "` in survey `", survey_tag, "` has more than one label."), call. = FALSE)
       }
-    },
-    character(1)
+      as.character(label)
+    }, character(1))
+
+    # Build core lookup table
+    lookup <- data.frame(
+      study_wave = survey_tag,
+      var_name   = names(data),
+      var_label  = var_labels,
+      stringsAsFactors = FALSE
     )
 
-
-    if (include_dataset_id) {
-
-      if (!("dataset_id" %in% names(data))) {
-        stop("`include_dataset_id = TRUE` but `dataset_id` column not found in survey: ",
-             survey_tag, call. = FALSE)
-      }
-
-      dataset_id <- data$dataset_id[1]
-
-      survey_lookup <- data.frame(
-        dataset_id = dataset_id,
-        study_wave = survey_tag,
-        var_name   = var_names,
-        var_label  = var_labels,
-        stringsAsFactors = FALSE
-      )
-
-    } else {
-
-      survey_lookup <- data.frame(
-        study_wave = survey_tag,
-        var_name   = var_names,
-        var_label  = var_labels,
-        stringsAsFactors = FALSE
-      )
+    if (use_dataset_id) {
+      lookup <- cbind(dataset_id = data$dataset_id[1], lookup)
     }
 
-    lookup_list[[i]] <- survey_lookup
+    # Filter & join target annotations
+    if (use_annotations) {
+      wave_ann <- annotations[annotations$study_wave %in% survey_tag, , drop = FALSE]
+      if (nrow(wave_ann) > 0) {
+        lookup   <- lookup[lookup$var_name %in% wave_ann$src_var, , drop = FALSE]
+        idx      <- match(lookup$var_name, wave_ann$src_var)
+        lookup$target_var <- wave_ann$target_var[idx]
+      }
+    }
+
+    lookup_list[[i]] <- lookup
   }
 
-  all_vars_lookup_table <- do.call(rbind, lookup_list)
-  rownames(all_vars_lookup_table) <- NULL
-
-  all_vars_lookup_table
+  # Combine
+  result <- do.call(rbind, lookup_list)
+  rownames(result) <- NULL
+  result
 }
 
 
