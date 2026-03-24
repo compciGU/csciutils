@@ -21,7 +21,10 @@
 #' \dontrun{
 #' surveys <- load_survey_list(conn, "ess")
 #' }
+<<<<<<< HEAD
 #' @export
+=======
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 load_survey_list <- function(conn, proj) {
 
   TABLE <- "datasets"
@@ -108,7 +111,10 @@ load_survey_list <- function(conn, proj) {
 #' cwt <- load_cwt("ess", "aligned")
 #' load_cwt("ess", "appended")
 #' }
+<<<<<<< HEAD
 #' @export
+=======
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 load_cwt <- function(proj, status = "appended") {
 
   #proj = "ases"
@@ -204,7 +210,10 @@ load_cwt <- function(proj, status = "appended") {
 #' ann <- load_annotations(conn, "ess")
 #' ann_long <- load_annotations(conn, "ess", reshape = TRUE)
 #' }
+<<<<<<< HEAD
 #' @export
+=======
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 load_annotations <- function(conn, proj, reshape = FALSE) {
 
 
@@ -329,7 +338,10 @@ load_annotations <- function(conn, proj, reshape = FALSE) {
 #'   include_validations = c("dataset_id", "t_annotations")
 #' )
 #' }
+<<<<<<< HEAD
 #' @export
+=======
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 load_var_validations <- function(
     conn,
     proj            = NULL,

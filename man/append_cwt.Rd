@@ -2,19 +2,32 @@
 % Please edit documentation in R/cwt.R
 \name{append_cwt}
 \alias{append_cwt}
+<<<<<<< HEAD
 \title{Bind new variable annotations to an existing crosswalk table}
+=======
+\title{Append new variable annotations to an existing crosswalk table}
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 \usage{
 append_cwt(conn, proj)
 }
 \arguments{
+<<<<<<< HEAD
 \item{conn}{A database connection passed to inline functions used to load survey data, exisitn CWTs or annotations.}
+=======
+\item{conn}{A database connection passed to [load_annotations()] and
+[build_cwt()].}
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 
 \item{proj}{One or more survey project codes. Must be one or more of: `"ases"`, `"cceb"`, `"cdcee"`, `"cses"`,
 `"eb"`, `"eqls"`, `"ess"`, `"evs"`, `"intune"`, `"issp"`, `"lits"`,
 `"nbb"`, `"neb"`, `"wvs"`.}
 }
 \value{
+<<<<<<< HEAD
 The updated CWT data frame appended with multiple rows per variable (one row per variable value) not yet included in the original CWT, returned invisibly. Takes columns from [build_cwt()] which are not modified. If no variables are missing,
+=======
+The updated CWT, returned invisibly. If no variables are missing,
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
   the original CWT is returned unchanged.
 }
 \description{

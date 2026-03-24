@@ -2,7 +2,11 @@
 % Please edit documentation in R/cwt.R
 \name{write_cwt}
 \alias{write_cwt}
+<<<<<<< HEAD
 \title{Save a crosswalk table to a disk}
+=======
+\title{Write a crosswalk table to disk}
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 \usage{
 write_cwt(cwt, proj = NULL, split = FALSE, ...)
 }
@@ -12,7 +16,11 @@ write_cwt(cwt, proj = NULL, split = FALSE, ...)
 \item{proj}{A project code. If `NULL`, the function derives it from
 \code{cwt$study_wave[1]}.}
 
+<<<<<<< HEAD
 \item{split}{Controls whether to split the CWT in controls, SwD, trust, tech varibale subsets before writing.}
+=======
+\item{split}{Controls whether to split the CWT before writing.}
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 
 \item{...}{Additional arguments passed to [csciutils::write_file()].}
 }
@@ -21,8 +29,13 @@ write_cwt(cwt, proj = NULL, split = FALSE, ...)
 }
 \description{
 Write a crosswalk table (CWT) to the project's \code{appended} directory as
+<<<<<<< HEAD
 the appended snapshot and to the \code{recoded} directory as a timestamped
 file to code target values.
+=======
+the current version and to the \code{recoded} directory as a timestamped
+snapshot.
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 }
 \section{Split options}{
 

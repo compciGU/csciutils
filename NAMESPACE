@@ -5,10 +5,13 @@ export(append_cwt)
 export(bind_cwts)
 export(build_cwt)
 export(clean_varnames)
+<<<<<<< HEAD
 export(load_annotations)
 export(load_cwt)
 export(load_survey_list)
 export(load_var_validations)
+=======
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 export(read_db_credentials)
 export(read_file)
 export(read_survey_data)

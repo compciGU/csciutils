@@ -2,7 +2,11 @@
 % Please edit documentation in R/cwt.R
 \name{bind_cwts}
 \alias{bind_cwts}
+<<<<<<< HEAD
 \title{Combine crosswalk tables stored as separate files}
+=======
+\title{Bind crosswalk tables stored as separate files}
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 \usage{
 bind_cwts(proj, status, indicator)
 }
@@ -16,7 +20,11 @@ bind_cwts(proj, status, indicator)
 \code{c("swd", "controls")}.}
 }
 \value{
+<<<<<<< HEAD
 A data frame formed by row-binding the requested CWT files which - Columns are not modified.
+=======
+A data frame formed by row-binding the requested CWT files.
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 }
 \description{
 Read and row-bind crosswalk table (CWT) files for one or more indicators

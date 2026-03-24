@@ -1,9 +1,14 @@
 # User-facing functions ----
 
 
+<<<<<<< HEAD
 #' Combine crosswalk tables stored as separate files
 #'
 #' @description
+=======
+#' Bind crosswalk tables stored as separate files
+#'
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 #' Read and row-bind crosswalk table (CWT) files for one or more indicators
 #' from a project's \code{appended} or \code{recoded} directory.
 #'
@@ -13,7 +18,11 @@
 #' @param indicator A character vector of indicator groups to load, such as
 #'   \code{c("swd", "controls")}.
 #'
+<<<<<<< HEAD
 #' @returns A data frame formed by row-binding the requested CWT files which - Columns are not modified.
+=======
+#' @returns A data frame formed by row-binding the requested CWT files.
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 #'
 #' @details
 #' For each indicator, the function looks for a file named
@@ -78,17 +87,29 @@ bind_cwts <- function(proj, status, indicator) {
 
 
 
+<<<<<<< HEAD
 #' Save a crosswalk table to a disk
 #'
 #' @description
 #' Write a crosswalk table (CWT) to the project's \code{appended} directory as
 #' the appended snapshot and to the \code{recoded} directory as a timestamped
 #' file to code target values.
+=======
+#' Write a crosswalk table to disk
+#'
+#' Write a crosswalk table (CWT) to the project's \code{appended} directory as
+#' the current version and to the \code{recoded} directory as a timestamped
+#' snapshot.
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 #'
 #' @param cwt A data frame containing the crosswalk table.
 #' @param proj A project code. If `NULL`, the function derives it from
 #'   \code{cwt$study_wave[1]}.
+<<<<<<< HEAD
 #' @param split Controls whether to split the CWT in controls, SwD, trust, tech varibale subsets before writing.
+=======
+#' @param split Controls whether to split the CWT before writing.
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 #' @param ... Additional arguments passed to [csciutils::write_file()].
 #'
 #' @returns `NULL`, invisibly.
@@ -211,6 +232,7 @@ write_cwt <- function(cwt, proj = NULL, split = FALSE, ...) {
 
 
 
+<<<<<<< HEAD
 #' Bind new variable annotations to an existing crosswalk table
 #'
 #' @description
@@ -220,6 +242,20 @@ write_cwt <- function(cwt, proj = NULL, split = FALSE, ...) {
 #'@inheritParams build_cwt
 #'
 #' @returns The updated CWT data frame appended with multiple rows per variable (one row per variable value) not yet included in the original CWT, returned invisibly. Takes columns from [build_cwt()] which are not modified. If no variables are missing,
+=======
+#' Append new variable annotations to an existing crosswalk table
+#'
+#' Compare source-variable annotations in the database with an existing aligned
+#' CWT and append rows only for variables not yet documented.
+#'
+#' @param conn A database connection passed to [load_annotations()] and
+#'   [build_cwt()].
+#' @param proj One or more survey project codes. Must be one or more of: `"ases"`, `"cceb"`, `"cdcee"`, `"cses"`,
+#'   `"eb"`, `"eqls"`, `"ess"`, `"evs"`, `"intune"`, `"issp"`, `"lits"`,
+#'   `"nbb"`, `"neb"`, `"wvs"`.
+#'
+#' @returns The updated CWT, returned invisibly. If no variables are missing,
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 #'   the original CWT is returned unchanged.
 #'
 #' @details
@@ -274,6 +310,7 @@ append_cwt <- function(conn, proj) {
 
 
 
+<<<<<<< HEAD
 #' Create a crosswalk table from source survey data
 #'
 #' @description
@@ -286,13 +323,28 @@ append_cwt <- function(conn, proj) {
 #'   `"nbb"`, `"neb"`, `"wvs"`.
 #' @param annotations A data frame with at least \code{src_var},
 #'   \code{target_var}, and \code{study_wave}. If `NULL` (the default), annotations are
+=======
+#' Build a crosswalk table from source survey data
+#'
+#' Build a crosswalk table (CWT) by extracting variable labels, value labels,
+#' and observed frequencies for annotated source variables.
+#'
+#' @param conn A database connection used to load survey data and annotations.
+#' @param proj One or more survey project codes.
+#' @param annotations A data frame with at least \code{src_var},
+#'   \code{target_var}, and \code{study_wave}. If `NULL`, annotations are
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 #'   loaded from the database.
 #'
 #' @returns A data frame with one row per unique source value, variable, and
 #'   survey wave.
 #'
 #' \describe{
+<<<<<<< HEAD
 #'   \item{study_wave}{Survey wave identifier (e.g. eb_37.2 or issp_2009).}
+=======
+#'   \item{study_wave}{Survey wave identifier.}
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 #'   \item{var_name}{Source variable name.}
 #'   \item{var_label}{Source variable label.}
 #'   \item{value_n}{Formatted value label with observed count.}
@@ -772,7 +824,11 @@ format_number_obs <- function(var_values, code_formatted, label_formatted) {
 timestamp <- function(time = Sys.time()) {
   withr::local_locale(c("LC_TIME" = "C"))
   withr::local_timezone("UTC")
+<<<<<<< HEAD
   format(time, "%Y-%m-%d")
+=======
+  format(time, "%Y_%m_%d")
+>>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 }
 
 
