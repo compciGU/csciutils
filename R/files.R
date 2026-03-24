@@ -1,3 +1,28 @@
+#' Read a file
+#'
+#' Read a file into R.
+#'
+#' @param f Path to a file.
+#' @param fn Optional reader function. If `NULL`, `read_file()` chooses a
+#'   reader based on the file extension.
+#' @param msg Should the function message which file it is reading?
+#' @param ... Additional arguments passed to the reader.
+#'
+#' @returns The parsed file contents. Usually a data frame, but this depends on
+#'   the file type and reader.
+#'
+#' @details
+#' `read_file()` supports common text, spreadsheet, and statistical data
+#' formats, including `.csv`, `.xlsx`, `.dta`, `.sav`, `.rds`, and `.RData`.
+#' It prefers package-specific readers when available and falls back to base R
+#' where possible.
+#'
+#' @seealso [write_file()], [read_survey_data()]
+#' @examples
+#' \dontrun{
+#' df <- read_file("data/my_data.csv")
+#' x <- read_file("data/my_data.dta")
+#' }
 #' @export
 read_file <- function(f, fn = NULL, msg = TRUE, ...) {
   if (missing(f) || length(f) != 1L) stop("Missing file")
@@ -114,6 +139,28 @@ read_file <- function(f, fn = NULL, msg = TRUE, ...) {
   )
 }
 
+#' Write a file
+#'
+#' Write an object to disk.
+#'
+#' @param x Object to write.
+#' @param path Output path.
+#' @param overwrite Should an existing file be overwritten?
+#' @param msg Should the function message which file it wrote?
+#' @param ... Additional arguments passed to the writer.
+#'
+#' @returns The output path, invisibly.
+#'
+#' @details
+#' `write_file()` writes common text, spreadsheet, and statistical data formats,
+#' including `.csv`, `.xlsx`, `.sav`, `.dta`, `.rds`, and `.RData`.
+#'
+#' @seealso [read_file()]
+#' @examples
+#' \dontrun{
+#' write_file(df, "data/my_data.csv", overwrite = TRUE)
+#' write_file(df, "data/my_data.xlsx", overwrite = TRUE)
+#' }
 #' @export
 write_file <- function(x, path, overwrite = FALSE, msg = TRUE, ...) {
   if (missing(path) || length(path) != 1L) stop("Missing path")

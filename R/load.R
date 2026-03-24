@@ -1,6 +1,26 @@
-
-# Load Surveys as List object ----
-
+#' Load survey data as a named list
+#'
+#' Load all datasets for a project and return them as a named list.
+#'
+#' @param conn A database connection.
+#' @param proj Project identifier.
+#'
+#' @returns A named list of survey data frames. Names correspond to dataset
+#'   tags. Failed loads return `NULL`.
+#'
+#' @details
+#' The function queries the `datasets` table for `proj` and loads each dataset
+#' with [read_survey_data()]. It adds `dataset_id` to each data frame before
+#' returning the list.
+#'
+#' @seealso [read_survey_data()], [build_cwt()], [load_var_validations()]
+#' @family cwt-helpers
+#' @keywords internal
+#'
+#' @examples
+#' \dontrun{
+#' surveys <- load_survey_list(conn, "ess")
+#' }
 load_survey_list <- function(conn, proj) {
 
   TABLE <- "datasets"
@@ -50,7 +70,7 @@ load_survey_list <- function(conn, proj) {
 }
 
 
-# Load CWTs ----
+
 
 # Should we add a "status" argument to decide which cwt to load? I.e., aligned,
 # appeneded or recoded?
@@ -61,6 +81,32 @@ load_survey_list <- function(conn, proj) {
 # If status is appended or recoding, then there are several cwts that are automatically
 # loaded in the global envr
 
+#' Load crosswalk tables from disk
+#'
+#' Load crosswalk tables (CWTs) for a project from disk.
+#'
+#' @param proj Survey Project identifier.
+#' @param status CWT version to load. Defaults to `"appended"`.
+#'
+#' @returns
+#' For `"aligned"` and `"original"`, returns a single CWT.
+#'
+#' For `"appended"` and `"recoding"`, loads all files and assigns them to the
+#' global environment.
+#'
+#' @details
+#' Reads files from project-specific directories under
+#' `Sys.getenv("ROOT_DIR")`.
+#'
+#' @seealso [bind_cwts()], [write_cwt()]
+#' @family cwt-helpers
+#' @keywords internal
+#'
+#' @examples
+#' \dontrun{
+#' cwt <- load_cwt("ess", "aligned")
+#' load_cwt("ess", "appended")
+#' }
 load_cwt <- function(proj, status = "appended") {
 
   #proj = "ases"
@@ -97,7 +143,7 @@ load_cwt <- function(proj, status = "appended") {
       stop(sprintf("No CWT files found for this project: %s", proj), call. = FALSE)
     }
     message(paste("Reading CWT file:", cwt_file))
-    cwt <- read_file(paste0(CWT_DIR, "/", cwt_file))
+    cwt <- csciutils::read_file(paste0(CWT_DIR, "/", cwt_file))
 
   } else if (status == "original") {
 
@@ -107,7 +153,7 @@ load_cwt <- function(proj, status = "appended") {
     }
 
     message(paste("Reading CWT file:", cwt_file))
-    cwt <- read_file(paste0(CWT_DIR, "/", cwt_file))
+    cwt <- csciutils::read_file(paste0(CWT_DIR, "/", cwt_file))
 
   } else if (status == "appended" || status == "recoding") {
 
@@ -132,8 +178,30 @@ load_cwt <- function(proj, status = "appended") {
 
 
 
-# Load Annotations from DB ----
-
+#' Load source-variable annotations
+#'
+#' Load source-variable annotations from the database.
+#'
+#' @param conn A database connection.
+#' @param proj Survey project identifier.
+#' @param reshape Should the output be reshaped to long format?
+#'
+#' @returns A data frame of annotations. Returns wide format by default, or long
+#'   format if `reshape = TRUE`.
+#'
+#' @details
+#' Reads `{proj}_src_annotations`. If `reshape = TRUE`, pivots to one row per
+#' source-to-target mapping and splits multiple mappings into separate rows.
+#'
+#' @seealso [build_cwt()], [append_cwt()], [load_var_validations()]
+#' @family cwt-helpers
+#' @keywords internal
+#'
+#' @examples
+#' \dontrun{
+#' ann <- load_annotations(conn, "ess")
+#' ann_long <- load_annotations(conn, "ess", reshape = TRUE)
+#' }
 load_annotations <- function(conn, proj, reshape = FALSE) {
 
 
@@ -205,8 +273,59 @@ load_annotations <- function(conn, proj, reshape = FALSE) {
 
 
 
-# Get Variable lookup ----
-
+#' Build a variable lookup table
+#'
+#' Build a lookup table that links source variables to survey metadata and, when
+#' requested, to target-variable annotations.
+#'
+#' @param conn A database connection.
+#' @param proj Survey project identifier. Optional if `my_survey_list` is supplied.
+#' @param my_survey_list A named list of survey data frames.
+#' @param include_validations Character vector specifying which validation fields
+#'   to include. Must be any combination of `"dataset_id"` and
+#'   `"t_annotations"`.
+#'
+#' @returns A data frame with one row per variable. Depending on
+#'   `include_validations`, the output can include:
+#' \describe{
+#'   \item{dataset_id}{Dataset identifier for the survey.}
+#'   \item{study_wave}{Survey tag or study-wave name.}
+#'   \item{var_name}{Source variable name.}
+#'   \item{var_label}{Source variable label.}
+#'   \item{target_var}{Annotated target variable.}
+#' }
+#'
+#' @details
+#' The function builds one lookup table per survey and then combines them into a
+#' single data frame.
+#'
+#' It always extracts source variable names and variable labels. It can also:
+#' \itemize{
+#'   \item add `dataset_id` from the survey data, and
+#'   \item join target-variable annotations from [load_annotations()].
+#' }
+#'
+#' When annotation-based validation is requested, the function keeps only
+#' variables that appear in the annotation table for the corresponding study
+#' wave.
+#'
+#' This helper is useful for checking variable coverage, inspecting labels, and
+#' comparing source variables with the current annotation setup.
+#'
+#' @seealso [load_survey_list()], [load_annotations()], [build_cwt()]
+#' @family cwt-helpers
+#' @keywords internal
+#'
+#' @examples
+#' \dontrun{
+#' surveys <- load_survey_list(conn, "ess")
+#'
+#' lookup <- load_var_validations(
+#'   conn = conn,
+#'   my_survey_list = surveys,
+#'   include_validations = c("dataset_id", "t_annotations")
+#' )
+#' }
 load_var_validations <- function(
     conn,
     proj            = NULL,
