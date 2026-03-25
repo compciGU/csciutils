@@ -2,16 +2,11 @@
 % Please edit documentation in R/cwt.R
 \name{build_cwt}
 \alias{build_cwt}
-<<<<<<< HEAD
 \title{Create a crosswalk table from source survey data}
-=======
-\title{Build a crosswalk table from source survey data}
->>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 \usage{
 build_cwt(conn, proj, annotations = NULL)
 }
 \arguments{
-<<<<<<< HEAD
 \item{conn}{A database connection passed to inline functions used to load survey data, exisitn CWTs or annotations.}
 
 \item{proj}{One or more survey project codes. Must be one or more of: `"ases"`, `"cceb"`, `"cdcee"`, `"cses"`,
@@ -20,14 +15,6 @@ build_cwt(conn, proj, annotations = NULL)
 
 \item{annotations}{A data frame with at least \code{src_var},
 \code{target_var}, and \code{study_wave}. If `NULL` (the default), annotations are
-=======
-\item{conn}{A database connection used to load survey data and annotations.}
-
-\item{proj}{One or more project codes.}
-
-\item{annotations}{A data frame with at least \code{src_var},
-\code{target_var}, and \code{study_wave}. If `NULL`, annotations are
->>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 loaded from the database.}
 }
 \value{
@@ -35,11 +22,7 @@ A data frame with one row per unique source value, variable, and
   survey wave.
 
 \describe{
-<<<<<<< HEAD
   \item{study_wave}{Survey wave identifier (e.g. eb_37.2 or issp_2009).}
-=======
-  \item{study_wave}{Survey wave identifier.}
->>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
   \item{var_name}{Source variable name.}
   \item{var_label}{Source variable label.}
   \item{value_n}{Formatted value label with observed count.}
@@ -54,13 +37,8 @@ Technical variables such as \code{t_weight} and \code{t_caseid} are reduced
 to one row per wave, with value-level columns set to `NA`.
 }
 \description{
-<<<<<<< HEAD
 Build a crosswalk table (CWT) from scratch by extracting variable labels, value labels,
 and observed frequencies for annotated source variables from stata files.
-=======
-Build a crosswalk table (CWT) by extracting variable labels, value labels,
-and observed frequencies for annotated source variables.
->>>>>>> 376e5acb60c3b7a51b88123a29d82dcd19222017
 }
 \details{
 The function implements the variable-selection and values-crosswalk steps of
