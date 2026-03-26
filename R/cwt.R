@@ -28,7 +28,11 @@
 #' workflow and toolbox for survey data harmonization. \emph{Methodological
 #' Innovations}, 15(1), 62--72. \doi{10.1177/20597991221077923}
 #'
-#' @seealso [write_cwt()], [build_cwt()], [append_cwt()]
+#' @seealso
+#'  * [write_cwt()] saves a CWT to the directory.
+#'  * [build_cwt()] creates a CWT from scratch.
+#'  * [append_cwt()] binds missing variables to an existing CWT.
+#'
 #' @family cwt
 #'
 #' @examplesIf Sys.getenv("ROOT_DIR") != ""
@@ -130,7 +134,11 @@ bind_cwts <- function(proj, status, indicator) {
 #' workflow and toolbox for survey data harmonization. \emph{Methodological
 #' Innovations}, 15(1), 62--72. \doi{10.1177/20597991221077923}
 #'
-#' @seealso [build_cwt()], [append_cwt()], [bind_cwts()]
+#' @seealso
+#'  * [bind_cwt()] binds CWT files together.
+#'  * [build_cwt()] creates a CWT from scratch.
+#'  * [append_cwt()] binds missing variables to an existing CWT.
+#'
 #' @family cwt
 #'
 #' @examplesIf Sys.getenv("ROOT_DIR") != ""
@@ -138,73 +146,115 @@ bind_cwts <- function(proj, status, indicator) {
 #' write_cwt(cwt, proj = "ess", split = TRUE)
 #' write_cwt(cwt, proj = "ess", split = c("swd", "controls"))
 #' @export
-write_cwt <- function(cwt, proj = NULL, split = FALSE, ...) {
+write_cwt <- function(cwt, proj = NULL, split = FALSE, split_pattern = NULL, ...) {
 
-  # Constants
-  SPLIT_GROUPS <- list(
-    controls = c("t_age", "t_cntry", "t_female", "t_lrscale", "t_polint", "t_ageedu",
-                 "t_educ", "t_isced", "t_yrsedu", "t_educ2", "t_educ3", "t_year",
-                 "t_yob", "t_ageedu_year", "t_ageedu2", "t_educ_cs", "t_satlife"),
-    swd     = c("t_satdem", "t_satdem_eu", "t_satpolitics", "t_satpolsys",
-                "t_pridedem", "t_satdemdev"),
-    tech    = c("t_sampdesign", "t_surveymode", "t_resprate", "t_langinterview",
-                "t_caseid", "t_weight_pst", "t_wave", "t_weight", "t_weight_des",
-                "t_weight_despst"),
-    trust   = c("trust_army", "trust_gov", "trust_jus", "trust_parl", "trust_police",
-                "trust_polpart", "trust_press", "trust_rel", "trust_tv", "trust_army2",
-                "trust_parl2", "trust_rel2", "trust_police2", "trust_polpart2",
-                "trust_media", "trust_jus2", "trust_publofficials", "trust_civserv")
+  # Regex patterns used to build split files from `target_var`
+  SPLIT_PATTERNS <- list(
+    controls = c(
+      "^t_age$",
+      "^t_ageedu",
+      "^t_cntry$",
+      "^t_educ",
+      "^t_female$",
+      "^t_isced",
+      "^t_lrscale$",
+      "^t_polint$",
+      "^t_satlife$",
+      "^t_year$",
+      "^t_yob$",
+      "^t_yrsedu"
+    ),
+    swd = c(
+      "^t_pridedem$",
+      "^t_satdem",
+      "^t_satpolitics$",
+      "^t_satpolsys$"
+    ),
+    tech = c(
+      "^t_caseid$",
+      "^t_langinterview$",
+      "^t_resprate$",
+      "^t_sampdesign$",
+      "^t_surveymode$",
+      "^t_wave$",
+      "^t_weight"
+    ),
+    trust = c(
+      "^trust_"
+    )
   )
 
-  SPLIT <- if (isFALSE(split)) {
-    FALSE
-  } else if (isTRUE(split)) {
-    names(SPLIT_GROUPS)
+  split_patterns <- if (is.null(split_pattern)) {
+    SPLIT_PATTERNS
   } else {
-    match.arg(split, choices = names(SPLIT_GROUPS), several.ok = TRUE)
+    split_pattern
   }
 
-  PROJ <- if (!is.null(proj)) {
-    match.arg(proj, choices = c("ases", "cceb", "cdcee", "cses",
-                                "eb", "eqls", "ess", "evs",
-                                "intune", "issp", "lits", "nbb",
-                                "neb", "wvs"))
+  split <- if (isFALSE(split)) {
+    FALSE
+  } else if (isTRUE(split)) {
+    names(split_patterns)
+  } else {
+    match.arg(split, choices = names(split_patterns), several.ok = TRUE)
+  }
+
+  proj <- if (!is.null(proj)) {
+    match.arg(
+      proj,
+      choices = c(
+        "ases", "cceb", "cdcee", "cses",
+        "eb", "eqls", "ess", "evs",
+        "intune", "issp", "lits", "nbb",
+        "neb", "wvs"
+      )
+    )
   } else {
     sw <- cwt$study_wave[1]
-    if (is.null(sw) || is.na(sw)) stop(
-      "`proj` is NULL and `cwt$study_wave[1]` is missing; cannot derive a file name.",
-      call. = FALSE
-    )
+    if (is.null(sw) || is.na(sw)) {
+      stop(
+        "`proj` is NULL and `cwt$study_wave[1]` is missing; cannot derive a file name.",
+        call. = FALSE
+      )
+    }
     tolower(sub("_.*$", "", sw))
   }
 
-  ROOT_DIR     <- Sys.getenv("ROOT_DIR")
-  DIR_APPENDED <- file.path(ROOT_DIR, "cwts", "appended", PROJ)
-  DIR_RECODED  <- file.path(ROOT_DIR, "cwts", "recoded",  PROJ)
+  root_dir     <- Sys.getenv("ROOT_DIR")
+  dir_appended <- file.path(root_dir, "cwts", "appended", proj)
+  dir_recoded  <- file.path(root_dir, "cwts", "recoded", proj)
 
   stopifnot("'cwt' must be a data.frame"              = is.data.frame(cwt))
-  stopifnot("'ROOT_DIR' environment variable not set" = ROOT_DIR != "")
-  stopifnot("'appended' output dir does not exist"    = dir.exists(DIR_APPENDED))
-  stopifnot("'recoded' output dir does not exist"     = dir.exists(DIR_RECODED))
+  stopifnot("'target_var' column missing from `cwt`"  = "target_var" %in% names(cwt))
+  stopifnot("'ROOT_DIR' environment variable not set" = root_dir != "")
+  stopifnot("'appended' output dir does not exist"    = dir.exists(dir_appended))
+  stopifnot("'recoded' output dir does not exist"     = dir.exists(dir_recoded))
 
   ts <- timestamp()
 
-  if (!isFALSE(SPLIT)) {
-    f_list <- setNames(vector("list", length(SPLIT)), SPLIT)
-    for (f in SPLIT) {
-      f_list[[f]] <- cwt[cwt$target_var %in% SPLIT_GROUPS[[f]], ]
-    }
-    paths_appended <- file.path(DIR_APPENDED, paste0(ts,"_", SPLIT,".xlsx"))
-    paths_recoded  <- file.path(DIR_RECODED,  paste0(ts,"_", SPLIT,".xlsx"))
+  if (!isFALSE(split)) {
+    f_list <- lapply(split, function(group) {
+      patterns <- split_patterns[[group]]
+
+      if (length(patterns) == 0L) {
+        return(cwt[0, , drop = FALSE])
+      }
+
+      keep <- Reduce(`|`, lapply(patterns, grepl, x = cwt$target_var))
+      cwt[keep, , drop = FALSE]
+    })
+    names(f_list) <- split
+
+    paths_appended <- file.path(dir_appended, paste0(split, ".xlsx"))
+    paths_recoded  <- file.path(dir_recoded, paste0(ts, "_", split, ".xlsx"))
   } else {
     f_list         <- list(full_cwt = cwt)
-    paths_appended <- file.path(DIR_APPENDED, "full_cwt.xlsx")
-    paths_recoded  <- file.path(DIR_RECODED,  paste0(ts,"_" ,"full_cwt",".xlsx"))
+    paths_appended <- file.path(dir_appended, "full_cwt.xlsx")
+    paths_recoded  <- file.path(dir_recoded, paste0(ts, "_full_cwt.xlsx"))
   }
 
   lapply(seq_along(f_list), function(i) {
     csciutils::write_file(f_list[[i]], path = paths_appended[i], ...)
-    csciutils::write_file(f_list[[i]], path = paths_recoded[i],  ...)
+    csciutils::write_file(f_list[[i]], path = paths_recoded[i], ...)
   })
 
   invisible(NULL)
@@ -237,7 +287,10 @@ write_cwt <- function(cwt, proj = NULL, split = FALSE, ...) {
 #' workflow and toolbox for survey data harmonization. \emph{Methodological
 #' Innovations}, 15(1), 62--72. \doi{10.1177/20597991221077923}
 #'
-#' @seealso [build_cwt()], [write_cwt()], [find_missing_vars()]
+#' @seealso
+#'  * [write_cwt()] saves a CWT to the directory.
+#'  * [build_cwt()] creates a CWT from scratch.
+#'  * [bind_cwt()] binds CWT files in directory together.
 #' @family cwt
 #'
 #' @examplesIf Sys.getenv("ROOT_DIR") != ""
@@ -266,6 +319,10 @@ append_cwt <- function(conn, proj) {
   message("Found ", nrow(missing_ann), " missing variable annotation(s). Building CWT rows.")
 
   cwt_new  <- build_cwt(conn = conn, proj = PROJ, annotations = missing_ann)
+
+  cwt$value_code     <- as.character(cwt$value_code)
+  cwt_new$value_code <- as.character(cwt_new$value_code)
+
   cwt_bind <- dplyr::bind_rows(cwt, cwt_new)
 
   message("Appended ", nrow(cwt_new), " new row(s) to CWT.")
@@ -325,6 +382,10 @@ append_cwt <- function(conn, proj) {
 #' Innovations}, 15(1), 62--72. \doi{10.1177/20597991221077923}
 #'
 #' @seealso [append_cwt()], [write_cwt()], [format_value_labels()]
+#'  * [write_cwt()] saves a CWT to the directory.
+#'  * [build_cwt()] creates a CWT from scratch.
+#'  * [append_cwt()] binds missing variables to an existing CWT.
+#'  * [format_value_labels()] the core helper engine of the buidl_cwt function.
 #' @family cwt
 #'
 #' @examplesIf Sys.getenv("ROOT_DIR") != ""
@@ -664,54 +725,92 @@ format_value_labels <- function(var_values, var_name, wave_name, verbose = TRUE)
 
   var_label <- attr(var_values, "label")
   if (is.null(var_label)) var_label <- NA_character_
+  var_label <- as.character(var_label)[1]
 
   labels <- attr(var_values, "labels", exact = TRUE)
 
-  labels_obs <- unique(as.character(unclass(var_values)))
-  labels_obs <- labels_obs[!is.na(labels_obs)]
-  labels_obs <- labels_obs[order(as.numeric(labels_obs))]
+  obs_raw <- unique(unclass(var_values))
+  labels_obs <- .handle_tagged_values(obs_raw)
+  labels_obs <- unique(labels_obs[!is.na(labels_obs)])
+  labels_obs <- labels_obs[.order_mixed_codes(labels_obs)]
 
-  if (is.null(labels) || all(is.na(labels))) {
+  if (is.null(labels) || length(labels) == 0) {
 
-    message("NOTE: No Stata value labels found for variable: ", var_name,
-            " in dataset: ", wave_name, " - using observed values instead.")
+    if (verbose) {
+      message(
+        "NOTE: No Stata value labels found for variable: ", var_name,
+        " in dataset: ", wave_name, " - using observed values instead."
+      )
+    }
 
-    label_formatted <- paste0("[", labels_obs, "] ", labels_obs)
-    code_formatted  <- labels_obs
+    code_formatted  <- as.character(labels_obs)
+    label_formatted <- paste0("[", code_formatted, "] ", code_formatted)
 
   } else {
 
-    labels      <- labels[order(as.numeric(unname(labels)))]
-    stata_codes <- as.character(unname(labels))
+    label_text <- as.character(.strip_stata_prefix(names(labels)))
+    stata_codes <- .handle_tagged_values(unname(labels))
+
+    ord <- .order_mixed_codes(stata_codes)
+    stata_codes <- stata_codes[ord]
+    label_text  <- label_text[ord]
 
     if (length(unique(labels_obs)) > length(unique(stata_codes))) {
 
-      message("NOTE: More observed values than Stata labels for variable: ", var_name,
-              " in dataset: ", wave_name,
-              " - combining observed values with Stata labels.")
+      is_plain_missing_code <- is.na(stata_codes)
 
-      extra_obs <- setdiff(labels_obs, stata_codes)
-      obs_fmt   <- paste0("[", extra_obs, "] ", extra_obs)
+      stata_regular_codes  <- as.character(stata_codes[!is_plain_missing_code])
+      stata_regular_labels <- as.character(label_text[!is_plain_missing_code])
 
-      label_text <- .strip_stata_prefix(names(labels))
-      stata_fmt  <- paste0("[", stata_codes, "] ", label_text)
+      stata_missing_labels <- as.character(label_text[is_plain_missing_code])
 
-      combined        <- c(obs_fmt, stata_fmt)
-      codes           <- as.numeric(sub("^\\[(-?\\d+)\\].*", "\\1", combined))
-      label_formatted <- combined[order(codes)]
-      code_formatted  <- c(labels_obs, setdiff(stata_codes, labels_obs))
+      extra_obs <- setdiff(labels_obs, stata_regular_codes)
+
+      regular_df <- data.frame(
+        code = as.character(c(extra_obs, stata_regular_codes)),
+        label = as.character(c(extra_obs, stata_regular_labels)),
+        stringsAsFactors = FALSE
+      )
+
+      regular_df <- regular_df[!duplicated(regular_df$code), , drop = FALSE]
+      regular_df <- regular_df[.order_mixed_codes(regular_df$code), , drop = FALSE]
+
+      missing_df <- data.frame(
+        code = rep(NA_character_, length(stata_missing_labels)),
+        label = as.character(stata_missing_labels),
+        stringsAsFactors = FALSE
+      )
+
+      combined_df <- rbind(regular_df, missing_df)
+
+      code_formatted <- as.character(combined_df$code)
+      label_formatted <- ifelse(
+        is.na(code_formatted),
+        paste0("[NA] ", combined_df$label),
+        paste0("[", code_formatted, "] ", combined_df$label)
+      )
 
     } else {
 
-      message("NOTE: Using Stata value labels for variable: ", var_name,
-              " in dataset: ", wave_name,
-              " - observed values fully covered by labels.")
+      if (verbose) {
+        message(
+          "NOTE: Using Stata value labels for variable: ", var_name,
+          " in dataset: ", wave_name,
+          " - observed values fully covered by labels."
+        )
+      }
 
-      label_text      <- .strip_stata_prefix(names(labels))
-      label_formatted <- paste0("[", stata_codes, "] ", label_text)
-      code_formatted  <- stata_codes
+      code_formatted <- as.character(stata_codes)
+      label_formatted <- ifelse(
+        is.na(code_formatted),
+        paste0("[NA] ", label_text),
+        paste0("[", code_formatted, "] ", label_text)
+      )
     }
   }
+
+  label_formatted <- as.character(label_formatted)
+  code_formatted  <- as.character(code_formatted)
 
   list(
     var_label       = var_label,
@@ -798,5 +897,54 @@ timestamp <- function(time = Sys.time()) {
 #' @noRd
 .strip_stata_prefix <- function(x) {
   gsub("^\\s*[-+]?\\d+(?:\\.\\d+)?\\s*(?:\\.\\s*|,\\s*|:\\s*)", "", x, perl = TRUE)
+}
+
+
+#' Order a vector of mixed numeric and string codes
+#'
+#' Sorts a vector that contains both numeric-looking codes (e.g. `"1"`, `"2"`)
+#' and non-numeric strings (e.g. `"non-applicable"`, `"non-response"`) by placing numeric codes
+#' first in numeric order, followed by strings in alphabetical order, with
+#' `NA`s last. Coercion warnings from [as.numeric()] are suppressed
+#' intentionally — `NA` production for non-numeric strings is expected
+#' behaviour, not an error.
+#'
+#' @param x A vector of value codes, typically a mix of numeric strings and
+#'   character labels as found in CWT `value_code` columns.
+#'
+#' @returns An integer vector of indices suitable for use with `[` or
+#'   [order()], ordering elements as: numeric codes (ascending) → string
+#'   codes (alphabetical) → `NA`s.
+#'
+#' @seealso [format_value_labels()] where this ordering is applied.
+#'
+#' @family cwt-internal
+#' @keywords internal
+#' @noRd
+.order_mixed_codes <- function(x) {
+  x_chr <- as.character(x)
+  x_num <- suppressWarnings(as.numeric(x_chr))
+  order(is.na(x_num), x_num, x_chr)
+}
+
+#' @family cwt-internal
+#' @keywords internal
+#' @noRd
+.handle_tagged_values <- function(x) {
+
+  out <- as.character(x)
+
+
+  out[is.na(x)] <- NA_character_
+
+  # tagged NA only exists for double vectors
+  if (typeof(x) == "double") {
+    tagged <- haven::is_tagged_na(x)
+    if (any(tagged)) {
+      out[tagged] <- paste0("NA(", haven::na_tag(x[tagged]), ")")
+    }
+  }
+
+  out
 }
 

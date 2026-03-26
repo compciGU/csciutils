@@ -27,6 +27,8 @@ load_survey_list <- function(conn, proj) {
   TABLE <- "datasets"
 
   query <- paste0("SELECT * FROM ", TABLE, " WHERE proj = '", proj, "';")
+  #query <- paste0("SELECT * FROM ", TABLE, " WHERE tag = 'eb_72.4';") #testing this function interactively
+
   datasets <- DBI::dbGetQuery(conn, query)
 
   required_cols <- c("tag", "dataset_id")
