@@ -2,74 +2,54 @@
 % Please edit documentation in R/cwt.R
 \name{build_cwt}
 \alias{build_cwt}
-\title{Create a crosswalk table from source survey data}
+\title{Check whether all variables are present in the recoded CWT}
 \usage{
 build_cwt(conn, proj, annotations = NULL)
 }
 \arguments{
-\item{conn}{A database connection passed to inline functions used to load survey data, exisitn CWTs or annotations.}
+\item{conn}{A database connection passed to inline functions used to load
+existing CWTs or annotations.}
 
-\item{proj}{One or more survey project codes. Must be one or more of: `"ases"`, `"cceb"`, `"cdcee"`, `"cses"`,
-`"eb"`, `"eqls"`, `"ess"`, `"evs"`, `"intune"`, `"issp"`, `"lits"`,
-`"nbb"`, `"neb"`, `"wvs"`.}
-
-\item{annotations}{A data frame with at least \code{src_var},
-\code{target_var}, and \code{study_wave}. If `NULL` (the default), annotations are
-loaded from the database.}
+\item{proj}{One or more survey project codes. Must be one or more of:
+`"ases"`, `"cceb"`, `"cdcee"`, `"cses"`, `"eb"`, `"eqls"`, `"ess"`,
+`"evs"`, `"intune"`, `"issp"`, `"lits"`, `"nbb"`, `"neb"`, `"wvs"`.}
 }
 \value{
-A data frame with one row per unique source value, variable, and
-  survey wave.
-
+Invisibly returns a named list with two deduplicated data frames,
+  each containing `target_var` and `study_wave`:
 \describe{
-  \item{study_wave}{Survey wave identifier (e.g. eb_37.2 or issp_2009).}
-  \item{var_name}{Source variable name.}
-  \item{var_label}{Source variable label.}
-  \item{value_n}{Formatted value label with observed count.}
-  \item{value}{Formatted source value label, for example
-    \code{"[1] Yes"}.}
-  \item{value_code}{Source value code stored as character.}
-  \item{target_var}{Harmonized target variable name.}
-  \item{target_value}{Target value code, to be filled in during recoding.}
+  \item{aligned_missing_rows}{Variables from the aligned CWT missing in the recoded CWT.}
+  \item{ann_missing_rows}{Variables from the annotation sheet missing in the recoded CWT.}
 }
-
-Technical variables such as \code{t_weight} and \code{t_caseid} are reduced
-to one row per wave, with value-level columns set to `NA`.
 }
 \description{
-Build a crosswalk table (CWT) from scratch by extracting variable labels, value labels,
-and observed frequencies for annotated source variables from stata files.
+Validates that every variable from the aligned CWT and the annotation sheet
+is present in the final CWT to be recoded. Two checks are performed:
+
+\itemize{
+  \item All `var_name` + `study_wave` combinations from the aligned CWT are
+    found in the recoded CWT.
+  \item All `src_var` + `study_wave` combinations from the annotation sheet
+    (excluding common missing-value codes) are found in the recoded CWT.
+}
 }
 \details{
-The function implements the variable-selection and values-crosswalk steps of
-the workflow described in Kołczyńska (2022). For each annotated variable, it
-extracts source labels with [format_value_labels()] and appends observed
-counts with [format_number_obs()].
-
-Before processing, common missing-value codes (\code{"-999"},
-\code{"-99"}, \code{"999"}, \code{"99"}) are removed from the annotation
-table.
+Composite keys (`var_name_study_wave`) are used for matching across waves.
+Missing-value codes (\code{"-999"}, \code{"-99"}, \code{"999"}, \code{"99"})
+are excluded from the annotation check, consistent with [build_cwt()].
+The recoded CWT is loaded via [bind_cwts()] with
+\code{indicator = c("controls", "swd", "tech", "trust")}.
 }
 \examples{
 \dontshow{if (Sys.getenv("ROOT_DIR") != "") withAutoprint(\{ # examplesIf}
 con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-cwt <- build_cwt(conn = con, proj = "ess")
-
-ann <- load_annotations(con, proj = "ess", reshape = TRUE)
-cwt_trust <- build_cwt(
-  conn = con,
-  proj = "ess",
-  annotations = ann[ann$target_var == "trust_parl", ]
-)
+result <- check_cwt_recoded(conn = con, proj = "ess")
+result$aligned_missing_rows
+result$ann_missing_rows
 \dontshow{\}) # examplesIf}
 }
-\references{
-Kołczyńska, M. (2022). Combining multiple survey sources: A reproducible
-workflow and toolbox for survey data harmonization. \emph{Methodological
-Innovations}, 15(1), 62--72. \doi{10.1177/20597991221077923}
-}
 \seealso{
-[append_cwt()], [write_cwt()], [format_value_labels()]
+[build_cwt()], [append_cwt()], [bind_cwts()]
 
 Other cwt: 
 \code{\link{append_cwt}()},
@@ -77,3 +57,4 @@ Other cwt:
 \code{\link{write_cwt}()}
 }
 \concept{cwt}
+\keyword{internal}

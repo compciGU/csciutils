@@ -4,7 +4,7 @@
 \alias{bind_cwts}
 \title{Combine crosswalk tables stored as separate files}
 \usage{
-bind_cwts(proj, status, indicator)
+bind_cwts(proj, status, indicator, timestamp = timestamp())
 }
 \arguments{
 \item{proj}{A single project code, such as \code{"ess"} or \code{"eb"}.}
@@ -44,7 +44,9 @@ workflow and toolbox for survey data harmonization. \emph{Methodological
 Innovations}, 15(1), 62--72. \doi{10.1177/20597991221077923}
 }
 \seealso{
-[write_cwt()], [build_cwt()], [append_cwt()]
+* [write_cwt()] saves a CWT to the directory.
+ * [build_cwt()] creates a CWT from scratch.
+ * [append_cwt()] binds missing variables to an existing CWT.
 
 Other cwt: 
 \code{\link{append_cwt}()},

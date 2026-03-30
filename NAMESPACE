@@ -3,7 +3,6 @@
 export(add_scales_to_questions)
 export(append_cwt)
 export(bind_cwts)
-export(build_cwt)
 export(clean_varnames)
 export(load_annotations)
 export(load_cwt)

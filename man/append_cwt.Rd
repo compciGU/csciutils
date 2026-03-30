@@ -7,11 +7,12 @@
 append_cwt(conn, proj)
 }
 \arguments{
-\item{conn}{A database connection passed to inline functions used to load survey data, exisitn CWTs or annotations.}
+\item{conn}{A database connection passed to inline functions used to load
+existing CWTs or annotations.}
 
-\item{proj}{One or more survey project codes. Must be one or more of: `"ases"`, `"cceb"`, `"cdcee"`, `"cses"`,
-`"eb"`, `"eqls"`, `"ess"`, `"evs"`, `"intune"`, `"issp"`, `"lits"`,
-`"nbb"`, `"neb"`, `"wvs"`.}
+\item{proj}{One or more survey project codes. Must be one or more of:
+`"ases"`, `"cceb"`, `"cdcee"`, `"cses"`, `"eb"`, `"eqls"`, `"ess"`,
+`"evs"`, `"intune"`, `"issp"`, `"lits"`, `"nbb"`, `"neb"`, `"wvs"`.}
 }
 \value{
 The updated CWT data frame appended with multiple rows per variable (one row per variable value) not yet included in the original CWT, returned invisibly. Takes columns from [build_cwt()] which are not modified. If no variables are missing,
@@ -41,7 +42,9 @@ workflow and toolbox for survey data harmonization. \emph{Methodological
 Innovations}, 15(1), 62--72. \doi{10.1177/20597991221077923}
 }
 \seealso{
-[build_cwt()], [write_cwt()], [find_missing_vars()]
+* [write_cwt()] saves a CWT to the directory.
+ * [build_cwt()] creates a CWT from scratch.
+ * [bind_cwt()] binds CWT files in directory together.
 
 Other cwt: 
 \code{\link{bind_cwts}()},

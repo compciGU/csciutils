@@ -4,7 +4,7 @@
 \alias{write_cwt}
 \title{Save a crosswalk table to a disk}
 \usage{
-write_cwt(cwt, proj = NULL, split = FALSE, ...)
+write_cwt(cwt, proj = NULL, split = FALSE, split_pattern = NULL, ...)
 }
 \arguments{
 \item{cwt}{A data frame containing the crosswalk table.}
@@ -13,6 +13,8 @@ write_cwt(cwt, proj = NULL, split = FALSE, ...)
 \code{cwt$study_wave[1]}.}
 
 \item{split}{Controls whether to split the CWT in controls, SwD, trust, tech varibale subsets before writing.}
+
+\item{split_pattern}{Supplies a custom split pattern that overwirtes the default one.}
 
 \item{...}{Additional arguments passed to [csciutils::write_file()].}
 }
@@ -75,7 +77,9 @@ workflow and toolbox for survey data harmonization. \emph{Methodological
 Innovations}, 15(1), 62--72. \doi{10.1177/20597991221077923}
 }
 \seealso{
-[build_cwt()], [append_cwt()], [bind_cwts()]
+* [bind_cwt()] binds CWT files together.
+ * [build_cwt()] creates a CWT from scratch.
+ * [append_cwt()] binds missing variables to an existing CWT.
 
 Other cwt: 
 \code{\link{append_cwt}()},

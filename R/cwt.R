@@ -42,7 +42,9 @@
 #'   indicator = c("swd", "controls")
 #' )
 #' @export
-bind_cwts <- function(proj, status, indicator) {
+bind_cwts <- function(proj, status, indicator, timestamp = timestamp()) {
+
+  TIMESTAMP <- "2026-03-30" #timestamp
 
   if (status == "appended") {
 
@@ -60,7 +62,7 @@ bind_cwts <- function(proj, status, indicator) {
 
   for (i in indicator) {
 
-    file_candidates <- file.path(CWT_DIR, paste0(i, EXT))
+    file_candidates <- file.path(CWT_DIR, paste0(TIMESTAMP,"_" ,i, EXT))
     cwt_file <- file_candidates[file.exists(file_candidates)][1]
 
     if (is.na(cwt_file))
@@ -95,6 +97,7 @@ bind_cwts <- function(proj, status, indicator) {
 #' @param proj A project code. If `NULL`, the function derives it from
 #'   \code{cwt$study_wave[1]}.
 #' @param split Controls whether to split the CWT in controls, SwD, trust, tech varibale subsets before writing.
+#' @param split_pattern Supplies a custom split pattern that overwirtes the default one.
 #' @param ... Additional arguments passed to [csciutils::write_file()].
 #'
 #' @returns `NULL`, invisibly.
@@ -162,7 +165,8 @@ write_cwt <- function(cwt, proj = NULL, split = FALSE, split_pattern = NULL, ...
       "^t_satlife$",
       "^t_year$",
       "^t_yob$",
-      "^t_yrsedu"
+      "^t_yrsedu",
+      "^t_vote"
     ),
     swd = c(
       "^t_pridedem$",
@@ -303,6 +307,7 @@ append_cwt <- function(conn, proj) {
                                       "intune", "issp", "lits", "nbb", "neb", "wvs"), several.ok = TRUE)
 
   cwt         <- load_cwt(proj = PROJ, status = "aligned")
+
   annotations <- load_annotations(conn = conn, proj = PROJ, reshape = TRUE)
 
   stopifnot("'annotations' must be a data.frame" = is.data.frame(annotations))
@@ -334,71 +339,49 @@ append_cwt <- function(conn, proj) {
 
 
 
-#' Create a crosswalk table from source survey data
+#' Check whether all variables are present in the recoded CWT
 #'
 #' @description
-#' Build a crosswalk table (CWT) from scratch by extracting variable labels, value labels,
-#' and observed frequencies for annotated source variables from stata files.
+#' Validates that every variable from the aligned CWT and the annotation sheet
+#' is present in the final CWT to be recoded. Two checks are performed:
 #'
-#' @param conn A database connection passed to inline functions used to load survey data, exisitn CWTs or annotations.
-#' @param proj One or more survey project codes. Must be one or more of: `"ases"`, `"cceb"`, `"cdcee"`, `"cses"`,
-#'   `"eb"`, `"eqls"`, `"ess"`, `"evs"`, `"intune"`, `"issp"`, `"lits"`,
-#'   `"nbb"`, `"neb"`, `"wvs"`.
-#' @param annotations A data frame with at least \code{src_var},
-#'   \code{target_var}, and \code{study_wave}. If `NULL` (the default), annotations are
-#'   loaded from the database.
-#'
-#' @returns A data frame with one row per unique source value, variable, and
-#'   survey wave.
-#'
-#' \describe{
-#'   \item{study_wave}{Survey wave identifier (e.g. eb_37.2 or issp_2009).}
-#'   \item{var_name}{Source variable name.}
-#'   \item{var_label}{Source variable label.}
-#'   \item{value_n}{Formatted value label with observed count.}
-#'   \item{value}{Formatted source value label, for example
-#'     \code{"[1] Yes"}.}
-#'   \item{value_code}{Source value code stored as character.}
-#'   \item{target_var}{Harmonized target variable name.}
-#'   \item{target_value}{Target value code, to be filled in during recoding.}
+#' \itemize{
+#'   \item All `var_name` + `study_wave` combinations from the aligned CWT are
+#'     found in the recoded CWT.
+#'   \item All `src_var` + `study_wave` combinations from the annotation sheet
+#'     (excluding common missing-value codes) are found in the recoded CWT.
 #' }
 #'
-#' Technical variables such as \code{t_weight} and \code{t_caseid} are reduced
-#' to one row per wave, with value-level columns set to `NA`.
+#' @param conn A database connection passed to inline functions used to load
+#'   existing CWTs or annotations.
+#' @param proj One or more survey project codes. Must be one or more of:
+#'   `"ases"`, `"cceb"`, `"cdcee"`, `"cses"`, `"eb"`, `"eqls"`, `"ess"`,
+#'   `"evs"`, `"intune"`, `"issp"`, `"lits"`, `"nbb"`, `"neb"`, `"wvs"`.
+#'
+#' @return Invisibly returns a named list with two deduplicated data frames,
+#'   each containing `target_var` and `study_wave`:
+#' \describe{
+#'   \item{aligned_missing_rows}{Variables from the aligned CWT missing in the recoded CWT.}
+#'   \item{ann_missing_rows}{Variables from the annotation sheet missing in the recoded CWT.}
+#' }
 #'
 #' @details
-#' The function implements the variable-selection and values-crosswalk steps of
-#' the workflow described in Kołczyńska (2022). For each annotated variable, it
-#' extracts source labels with [format_value_labels()] and appends observed
-#' counts with [format_number_obs()].
+#' Composite keys (`var_name_study_wave`) are used for matching across waves.
+#' Missing-value codes (\code{"-999"}, \code{"-99"}, \code{"999"}, \code{"99"})
+#' are excluded from the annotation check, consistent with [build_cwt()].
+#' The recoded CWT is loaded via [bind_cwts()] with
+#' \code{indicator = c("controls", "swd", "tech", "trust")}.
 #'
-#' Before processing, common missing-value codes (\code{"-999"},
-#' \code{"-99"}, \code{"999"}, \code{"99"}) are removed from the annotation
-#' table.
-#'
-#' @references
-#' Kołczyńska, M. (2022). Combining multiple survey sources: A reproducible
-#' workflow and toolbox for survey data harmonization. \emph{Methodological
-#' Innovations}, 15(1), 62--72. \doi{10.1177/20597991221077923}
-#'
-#' @seealso [append_cwt()], [write_cwt()], [format_value_labels()]
-#'  * [write_cwt()] saves a CWT to the directory.
-#'  * [build_cwt()] creates a CWT from scratch.
-#'  * [append_cwt()] binds missing variables to an existing CWT.
-#'  * [format_value_labels()] the core helper engine of the buidl_cwt function.
+#' @seealso [build_cwt()], [append_cwt()], [bind_cwts()]
 #' @family cwt
 #'
 #' @examplesIf Sys.getenv("ROOT_DIR") != ""
 #' con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-#' cwt <- build_cwt(conn = con, proj = "ess")
+#' result <- check_cwt_recoded(conn = con, proj = "ess")
+#' result$aligned_missing_rows
+#' result$ann_missing_rows
 #'
-#' ann <- load_annotations(con, proj = "ess", reshape = TRUE)
-#' cwt_trust <- build_cwt(
-#'   conn = con,
-#'   proj = "ess",
-#'   annotations = ann[ann$target_var == "trust_parl", ]
-#' )
-#' @export
+#' @keywords internal
 build_cwt <- function(conn, proj, annotations = NULL) {
 
   MISSING_CODES <- c("-999", "-99", "999", "99")
@@ -451,8 +434,8 @@ build_cwt <- function(conn, proj, annotations = NULL) {
       n_obs_fmt <- format_number_obs(vec, fmt$code_formatted, fmt$label_formatted)
 
       survey_result[[j]] <- data.frame(
-        study_wave   = toupper(study_wave),  # change if toupper or tolower
-        var_name     = v,
+        study_wave   = tolower(study_wave),  # change tolower
+        var_name     = tolower(v),           # change tolower
         var_label    = fmt$var_label,
         value_n      = n_obs_fmt,
         value        = fmt$label_formatted,
@@ -477,14 +460,86 @@ build_cwt <- function(conn, proj, annotations = NULL) {
   )
 
   if (length(missing) > 0) {
-    message(paste(
-      "NOTE: These source variable annotations were not found in the survey data:",
-      paste(missing, collapse = ", "),
-      "-> Please double-check src_var names."
-    ))
+    warning(
+      sprintf(
+        "%d source variable annotation(s) not found in survey data: %s\nDouble-check src_var names in your annotation table.",
+        length(missing),
+        paste(missing, collapse = ", ")
+      ),
+      call. = FALSE
+    )
   }
 
   cwt
+}
+
+
+#' Check CWT recoded
+#'
+#' @description Checks if all variables from the aligned CWT and annotation
+#'   sheet are present in the final CWT to recode.
+#'
+#' @param conn A database connection object.
+#' @param proj A character vector of project codes.
+#'
+#' @return Invisibly returns a list with `aligned_missing_rows` and `ann_missing_rows`.
+#'
+#' @keywords internal
+check_cwt_recoded <- function(conn, proj) {
+
+  PROJ <- match.arg(proj, choices = c("ases", "cceb", "cdcee", "cses", "eb", "eqls", "ess", "evs",
+                                      "intune", "issp", "lits", "nbb", "neb", "wvs"), several.ok = TRUE)
+
+  MISSING_CODES <- c("-999", "-99", "999", "99")
+
+  cwt_aligned <- load_cwt(proj = PROJ, status = "aligned")
+  annotations <- load_annotations(conn = conn, proj = PROJ, reshape = TRUE)
+  cwt_bind    <- bind_cwts(proj = PROJ, status = "recoded", indicator = c("controls", "swd", "tech", "trust"))
+
+  # Build composite keys
+  cwt_bind$key_bind       <- paste0(cwt_bind$var_name, "_", cwt_bind$study_wave)
+  cwt_aligned$key_aligned <- paste0(cwt_aligned$var_name, "_", cwt_aligned$study_wave)
+
+  # All annotations in cwt_bind
+  src_chr   <- trimws(as.character(annotations$src_var))
+  ann_clean <- annotations[!(src_chr %in% MISSING_CODES), , drop = FALSE]
+  ann_clean$key_ann <- tolower(paste0(ann_clean$src_var, "_", ann_clean$study_wave))
+
+  # Find differences
+  diff_aligned <- setdiff(cwt_aligned$key_aligned, cwt_bind$key_bind)
+  diff_ann     <- setdiff(unique(ann_clean$key_ann), cwt_bind$key_bind)
+
+  # Subset missing rows
+  ann_missing_rows <- unique(ann_clean[ann_clean$key_ann %in% diff_ann, c("target_var", "study_wave")])
+  aligned_missing_rows <- unique(cwt_aligned[cwt_aligned$key_aligned %in% diff_aligned, c("target_var", "study_wave")])
+
+  # Report
+  if (length(diff_aligned) == 0 && length(diff_ann) == 0) {
+
+    message("No missing variables in CWT to recode - ready to start recoding!")
+
+  } else {
+
+    if (length(diff_ann) > 0) {
+      message(sprintf(
+        "[%s] Cannot find target variable '%s' (wave: %s) from the annotation sheet in the final CWT to recode.",
+        paste(PROJ, collapse = ", "), ann_missing_rows$target_var, ann_missing_rows$study_wave
+      ))
+    }
+
+    if (length(diff_aligned) > 0) {
+      message(sprintf(
+        "[%s] Cannot find target variable '%s' (wave: %s) from the aligned CWT in the final CWT to recode.",
+        paste(PROJ, collapse = ", "), aligned_missing_rows$target_var, aligned_missing_rows$study_wave
+      ))
+    }
+
+  }
+
+  invisible(list(
+    aligned_missing_rows = aligned_missing_rows,
+    ann_missing_rows     = ann_missing_rows
+  ))
 }
 
 
