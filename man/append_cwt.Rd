@@ -49,6 +49,7 @@ Innovations}, 15(1), 62--72. \doi{10.1177/20597991221077923}
 Other cwt: 
 \code{\link{bind_cwts}()},
 \code{\link{build_cwt}()},
+\code{\link{check_cwt_recoded}()},
 \code{\link{write_cwt}()}
 }
 \concept{cwt}

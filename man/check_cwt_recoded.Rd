@@ -2,20 +2,48 @@
 % Please edit documentation in R/cwt.R
 \name{check_cwt_recoded}
 \alias{check_cwt_recoded}
-\title{Check CWT recoded}
+\title{Check whether all variables are present in the recoded CWT}
 \usage{
 check_cwt_recoded(conn, proj)
 }
 \arguments{
-\item{conn}{A database connection object.}
+\item{conn}{A database connection passed to inline functions used to load
+existing CWTs or annotations.}
 
-\item{proj}{A character vector of project codes.}
+\item{proj}{One or more survey project codes. Must be one or more of:
+`"ases"`, `"cceb"`, `"cdcee"`, `"cses"`, `"eb"`, `"eqls"`, `"ess"`,
+`"evs"`, `"intune"`, `"issp"`, `"lits"`, `"nbb"`, `"neb"`, `"wvs"`.}
 }
 \value{
-Invisibly returns a list with `aligned_missing_rows` and `ann_missing_rows`.
+Invisibly returns a named list with two deduplicated data frames,
+  each containing `target_var` and `study_wave`:
+\describe{
+  \item{aligned_missing_rows}{Variables from the aligned CWT missing in the recoded CWT.}
+  \item{ann_missing_rows}{Variables from the annotation sheet missing in the recoded CWT.}
+}
 }
 \description{
-Checks if all variables from the aligned CWT and annotation
-  sheet are present in the final CWT to recode.
+Validates that every variable from the aligned CWT and the annotation sheet
+is present in the final CWT to be recoded. Two checks are performed:
+
+\itemize{
+  \item All `var_name` + `study_wave` combinations from the aligned CWT are
+    found in the recoded CWT.
+  \item All `src_var` + `study_wave` combinations from the annotation sheet
+    (excluding common missing-value codes) are found in the recoded CWT.
 }
+}
+\details{
+.
+The recoded CWT is loaded via [bind_cwts()] with
+\code{indicator = c("controls", "swd", "tech", "trust")}.
+}
+\seealso{
+Other cwt: 
+\code{\link{append_cwt}()},
+\code{\link{bind_cwts}()},
+\code{\link{build_cwt}()},
+\code{\link{write_cwt}()}
+}
+\concept{cwt}
 \keyword{internal}

@@ -54,6 +54,7 @@ result$ann_missing_rows
 Other cwt: 
 \code{\link{append_cwt}()},
 \code{\link{bind_cwts}()},
+\code{\link{check_cwt_recoded}()},
 \code{\link{write_cwt}()}
 }
 \concept{cwt}

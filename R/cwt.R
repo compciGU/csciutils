@@ -13,6 +13,7 @@
 #'   \code{"appended"} or \code{"recoded"}.
 #' @param indicator A character vector of indicator groups to load, such as
 #'   \code{c("swd", "controls")}.
+#' @param timestamp Uses the current `sysdate()` timestamp as default. Otherwise supply timestamp for date of CWT creation.
 #'
 #' @returns A data frame formed by row-binding the requested CWT files which - Columns are not modified.
 #'
@@ -44,7 +45,7 @@
 #' @export
 bind_cwts <- function(proj, status, indicator, timestamp = timestamp()) {
 
-  TIMESTAMP <- "2026-03-30" #timestamp
+  TIMESTAMP <- "2026-03-31" #timestamp
 
   if (status == "appended") {
 
@@ -474,31 +475,60 @@ build_cwt <- function(conn, proj, annotations = NULL) {
 }
 
 
-#' Check CWT recoded
+#' Check whether all variables are present in the recoded CWT
 #'
-#' @description Checks if all variables from the aligned CWT and annotation
-#'   sheet are present in the final CWT to recode.
+#' @description
+#' Validates that every variable from the aligned CWT and the annotation sheet
+#' is present in the final CWT to be recoded. Two checks are performed:
 #'
-#' @param conn A database connection object.
-#' @param proj A character vector of project codes.
+#' \itemize{
+#'   \item All `var_name` + `study_wave` combinations from the aligned CWT are
+#'     found in the recoded CWT.
+#'   \item All `src_var` + `study_wave` combinations from the annotation sheet
+#'     (excluding common missing-value codes) are found in the recoded CWT.
+#' }
 #'
-#' @return Invisibly returns a list with `aligned_missing_rows` and `ann_missing_rows`.
+#' @param conn A database connection passed to inline functions used to load
+#'   existing CWTs or annotations.
+#' @param proj One or more survey project codes. Must be one or more of:
+#'   `"ases"`, `"cceb"`, `"cdcee"`, `"cses"`, `"eb"`, `"eqls"`, `"ess"`,
+#'   `"evs"`, `"intune"`, `"issp"`, `"lits"`, `"nbb"`, `"neb"`, `"wvs"`.
+#'
+#' @return Invisibly returns a named list with two deduplicated data frames,
+#'   each containing `target_var` and `study_wave`:
+#' \describe{
+#'   \item{aligned_missing_rows}{Variables from the aligned CWT missing in the recoded CWT.}
+#'   \item{ann_missing_rows}{Variables from the annotation sheet missing in the recoded CWT.}
+#' }
+#'
+#' @details.
+#' The recoded CWT is loaded via [bind_cwts()] with
+#' \code{indicator = c("controls", "swd", "tech", "trust")}.
+#'
+#' @family cwt
 #'
 #' @keywords internal
 check_cwt_recoded <- function(conn, proj) {
 
   PROJ <- match.arg(proj, choices = c("ases", "cceb", "cdcee", "cses", "eb", "eqls", "ess", "evs",
                                       "intune", "issp", "lits", "nbb", "neb", "wvs"), several.ok = TRUE)
-
+  EXT <- c(".xlsx", ".odt", ".csv")
+  ALIGNED_DIR <- file.path(Sys.getenv("ROOT_DIR"), "cwts", "aligned")
   MISSING_CODES <- c("-999", "-99", "999", "99")
 
-  cwt_aligned <- load_cwt(proj = PROJ, status = "aligned")
+  # Create flag if aligned CWT is in dir
+  file_candidates <- file.path(ALIGNED_DIR, paste0(PROJ, EXT))
+  aligned_f <- list.files(ALIGNED_DIR)
+  cwt_there <- any(file.exists(file_candidates))
+
+ # Load files
+  cwt_aligned <- if(cwt_there) load_cwt(proj = PROJ, status = "aligned")
   annotations <- load_annotations(conn = conn, proj = PROJ, reshape = TRUE)
   cwt_bind    <- bind_cwts(proj = PROJ, status = "recoded", indicator = c("controls", "swd", "tech", "trust"))
 
   # Build composite keys
   cwt_bind$key_bind       <- paste0(cwt_bind$var_name, "_", cwt_bind$study_wave)
-  cwt_aligned$key_aligned <- paste0(cwt_aligned$var_name, "_", cwt_aligned$study_wave)
+  cwt_aligned$key_aligned <- if (cwt_there) paste0(cwt_aligned$var_name, "_", cwt_aligned$study_wave)
 
   # All annotations in cwt_bind
   src_chr   <- trimws(as.character(annotations$src_var))
@@ -506,29 +536,30 @@ check_cwt_recoded <- function(conn, proj) {
   ann_clean$key_ann <- tolower(paste0(ann_clean$src_var, "_", ann_clean$study_wave))
 
   # Find differences
-  diff_aligned <- setdiff(cwt_aligned$key_aligned, cwt_bind$key_bind)
+  diff_aligned <- if (cwt_there) setdiff(cwt_aligned$key_aligned, cwt_bind$key_bind)
   diff_ann     <- setdiff(unique(ann_clean$key_ann), cwt_bind$key_bind)
+
 
   # Subset missing rows
   ann_missing_rows <- unique(ann_clean[ann_clean$key_ann %in% diff_ann, c("target_var", "study_wave")])
-  aligned_missing_rows <- unique(cwt_aligned[cwt_aligned$key_aligned %in% diff_aligned, c("target_var", "study_wave")])
+  aligned_missing_rows <- if (!is.null(cwt_aligned)) unique(cwt_aligned[cwt_aligned$key_aligned %in% diff_aligned, c("target_var", "study_wave")])
 
   # Report
   if (length(diff_aligned) == 0 && length(diff_ann) == 0) {
 
-    message("No missing variables in CWT to recode - ready to start recoding!")
+    message("No missing variables in finalised CWT - ready to start recoding!")
 
   } else {
 
     if (length(diff_ann) > 0) {
-      message(sprintf(
+      warning(sprintf(
         "[%s] Cannot find target variable '%s' (wave: %s) from the annotation sheet in the final CWT to recode.",
         paste(PROJ, collapse = ", "), ann_missing_rows$target_var, ann_missing_rows$study_wave
       ))
     }
 
-    if (length(diff_aligned) > 0) {
-      message(sprintf(
+    if (cwt_there && length(diff_aligned) > 0) {
+      warning(sprintf(
         "[%s] Cannot find target variable '%s' (wave: %s) from the aligned CWT in the final CWT to recode.",
         paste(PROJ, collapse = ", "), aligned_missing_rows$target_var, aligned_missing_rows$study_wave
       ))
@@ -537,7 +568,7 @@ check_cwt_recoded <- function(conn, proj) {
   }
 
   invisible(list(
-    aligned_missing_rows = aligned_missing_rows,
+    aligned_missing_rows = if (cwt_there) aligned_missing_rows else character(0),
     ann_missing_rows     = ann_missing_rows
   ))
 }
@@ -690,7 +721,10 @@ find_missing_vars <- function(cwt, annotations, has_waves) {
       stringsAsFactors = FALSE
     )
 
-    dplyr::anti_join(ann, cwt_vars, by = c("study_wave", "src_var"))
+    key_cwt <- paste0(cwt_vars$src_var, "_", cwt_vars$study_wave)
+    key_ann <- paste0(ann$src_var,      "_", ann$study_wave)
+
+    ann[!key_ann %in% key_cwt, , drop = FALSE]
 
   } else {
 

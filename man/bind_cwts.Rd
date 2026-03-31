@@ -14,6 +14,8 @@ bind_cwts(proj, status, indicator, timestamp = timestamp())
 
 \item{indicator}{A character vector of indicator groups to load, such as
 \code{c("swd", "controls")}.}
+
+\item{timestamp}{Uses the current `sysdate()` timestamp as default. Otherwise supply timestamp for date of CWT creation.}
 }
 \value{
 A data frame formed by row-binding the requested CWT files which - Columns are not modified.
@@ -51,6 +53,7 @@ Innovations}, 15(1), 62--72. \doi{10.1177/20597991221077923}
 Other cwt: 
 \code{\link{append_cwt}()},
 \code{\link{build_cwt}()},
+\code{\link{check_cwt_recoded}()},
 \code{\link{write_cwt}()}
 }
 \concept{cwt}
