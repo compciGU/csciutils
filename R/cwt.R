@@ -818,10 +818,14 @@ format_value_labels <- function(var_values, var_name, wave_name, verbose = TRUE)
 
   labels <- attr(var_values, "labels", exact = TRUE)
 
-  obs_raw <- unique(unclass(var_values))
-  labels_obs <- .handle_tagged_values(obs_raw)
-  labels_obs <- unique(labels_obs[!is.na(labels_obs)])
-  labels_obs <- labels_obs[.order_mixed_codes(labels_obs)]
+  # observed values as code strings, preserving tagged NA separately
+  obs_raw   <- unique(unclass(var_values))
+  obs_codes <- unique(.handle_tagged_values(obs_raw))
+
+  # flags for observed missingness
+  has_plain_na_obs  <- any(is.na(obs_codes))
+  obs_nonmissing    <- obs_codes[!is.na(obs_codes)]
+  obs_nonmissing    <- unique(obs_nonmissing[.order_mixed_codes(obs_nonmissing)])
 
   if (is.null(labels) || length(labels) == 0) {
 
@@ -832,69 +836,80 @@ format_value_labels <- function(var_values, var_name, wave_name, verbose = TRUE)
       )
     }
 
-    code_formatted  <- as.character(labels_obs)
-    label_formatted <- paste0("[", code_formatted, "] ", code_formatted)
+    code_formatted <- c(obs_nonmissing, if (has_plain_na_obs) NA_character_)
+    label_formatted <- ifelse(
+      is.na(code_formatted),
+      "[NA] NA",
+      paste0("[", code_formatted, "] ", code_formatted)
+    )
 
   } else {
 
-    label_text <- as.character(.strip_stata_prefix(names(labels)))
+    label_text  <- as.character(.strip_stata_prefix(names(labels)))
     stata_codes <- .handle_tagged_values(unname(labels))
 
     ord <- .order_mixed_codes(stata_codes)
     stata_codes <- stata_codes[ord]
     label_text  <- label_text[ord]
 
-    if (length(unique(labels_obs)) > length(unique(stata_codes))) {
+    stata_has_plain_na <- any(is.na(stata_codes))
+    stata_regular_codes  <- as.character(stata_codes[!is.na(stata_codes)])
+    stata_regular_labels <- as.character(label_text[!is.na(stata_codes)])
+    stata_missing_labels <- as.character(label_text[is.na(stata_codes)])
 
-      is_plain_missing_code <- is.na(stata_codes)
+    # extra observed non-missing codes not present in labels
+    extra_obs <- setdiff(obs_nonmissing, stata_regular_codes)
 
-      stata_regular_codes  <- as.character(stata_codes[!is_plain_missing_code])
-      stata_regular_labels <- as.character(label_text[!is_plain_missing_code])
+    regular_df <- data.frame(
+      code  = as.character(c(stata_regular_codes, extra_obs)),
+      label = as.character(c(stata_regular_labels, extra_obs)),
+      stringsAsFactors = FALSE
+    )
 
-      stata_missing_labels <- as.character(label_text[is_plain_missing_code])
+    regular_df <- regular_df[!duplicated(regular_df$code), , drop = FALSE]
+    regular_df <- regular_df[.order_mixed_codes(regular_df$code), , drop = FALSE]
 
-      extra_obs <- setdiff(labels_obs, stata_regular_codes)
+    missing_df <- data.frame(
+      code  = rep(NA_character_, length(stata_missing_labels)),
+      label = stata_missing_labels,
+      stringsAsFactors = FALSE
+    )
 
-      regular_df <- data.frame(
-        code = as.character(c(extra_obs, stata_regular_codes)),
-        label = as.character(c(extra_obs, stata_regular_labels)),
-        stringsAsFactors = FALSE
+    # add plain observed NA if it exists but is not already represented in labels
+    if (has_plain_na_obs && !stata_has_plain_na) {
+      missing_df <- rbind(
+        missing_df,
+        data.frame(
+          code = NA_character_,
+          label = "NA",
+          stringsAsFactors = FALSE
+        )
       )
+    }
 
-      regular_df <- regular_df[!duplicated(regular_df$code), , drop = FALSE]
-      regular_df <- regular_df[.order_mixed_codes(regular_df$code), , drop = FALSE]
+    combined_df <- rbind(regular_df, missing_df)
 
-      missing_df <- data.frame(
-        code = rep(NA_character_, length(stata_missing_labels)),
-        label = as.character(stata_missing_labels),
-        stringsAsFactors = FALSE
-      )
+    code_formatted <- as.character(combined_df$code)
+    label_formatted <- ifelse(
+      is.na(code_formatted),
+      paste0("[NA] ", combined_df$label),
+      paste0("[", code_formatted, "] ", combined_df$label)
+    )
 
-      combined_df <- rbind(regular_df, missing_df)
-
-      code_formatted <- as.character(combined_df$code)
-      label_formatted <- ifelse(
-        is.na(code_formatted),
-        paste0("[NA] ", combined_df$label),
-        paste0("[", code_formatted, "] ", combined_df$label)
-      )
-
-    } else {
-
-      if (verbose) {
+    if (verbose) {
+      if (length(extra_obs) > 0 || (has_plain_na_obs && !stata_has_plain_na)) {
+        message(
+          "NOTE: Observed values exceed Stata labels for variable: ", var_name,
+          " in dataset: ", wave_name,
+          " - appending unlabelled observed values."
+        )
+      } else {
         message(
           "NOTE: Using Stata value labels for variable: ", var_name,
           " in dataset: ", wave_name,
           " - observed values fully covered by labels."
         )
       }
-
-      code_formatted <- as.character(stata_codes)
-      label_formatted <- ifelse(
-        is.na(code_formatted),
-        paste0("[NA] ", label_text),
-        paste0("[", code_formatted, "] ", label_text)
-      )
     }
   }
 
@@ -931,10 +946,20 @@ format_value_labels <- function(var_values, var_name, wave_name, verbose = TRUE)
 #' @keywords internal
 #' @noRd
 format_number_obs <- function(var_values, code_formatted, label_formatted) {
-  tab       <- table(as.character(unclass(var_values)), useNA = "ifany")
-  n_obs_raw <- tab[match(code_formatted, names(tab))]
-  n_obs_raw[is.na(n_obs_raw)] <- 0
-  paste0(label_formatted, ": ", as.integer(n_obs_raw))
+
+  observed_codes <- .handle_tagged_values(unclass(var_values))
+  tab <- table(observed_codes, useNA = "ifany")
+
+  n_obs_raw <- vapply(code_formatted, function(code) {
+    if (is.na(code)) {
+      sum(is.na(observed_codes))
+    } else {
+      val <- tab[match(code, names(tab))]
+      if (length(val) == 0 || is.na(val)) 0L else as.integer(val)
+    }
+  }, integer(1))
+
+  paste0(label_formatted, ": ", n_obs_raw)
 }
 
 
