@@ -164,7 +164,6 @@ write_cwt <- function(cwt, proj = NULL, split = FALSE, split_pattern = NULL, ...
       "^t_lrscale$",
       "^t_polint$",
       "^t_satlife$",
-      "^t_year$",
       "^t_yob$",
       "^t_yrsedu",
       "^t_vote"
@@ -176,6 +175,7 @@ write_cwt <- function(cwt, proj = NULL, split = FALSE, split_pattern = NULL, ...
       "^t_satpolsys$"
     ),
     tech = c(
+      "^t_year",
       "^t_caseid$",
       "^t_langinterview$",
       "^t_resprate$",
