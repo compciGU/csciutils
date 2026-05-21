@@ -340,47 +340,68 @@ append_cwt <- function(conn, proj) {
 
 
 
-#' Check whether all variables are present in the recoded CWT
+#' Build a crosswalk table from survey data and annotations
 #'
 #' @description
-#' Validates that every variable from the aligned CWT and the annotation sheet
-#' is present in the final CWT to be recoded. Two checks are performed:
+#' Builds a crosswalk table (CWT) for one or more survey projects. The function
+#' loads the survey data, matches source variables from the annotation table to
+#' variables in the survey data, extracts value labels and observation counts,
+#' and returns a standardized CWT ready for recoding.
 #'
-#' \itemize{
-#'   \item All `var_name` + `study_wave` combinations from the aligned CWT are
-#'     found in the recoded CWT.
-#'   \item All `src_var` + `study_wave` combinations from the annotation sheet
-#'     (excluding common missing-value codes) are found in the recoded CWT.
-#' }
+#' @param conn A database connection. This is passed to helper functions such as
+#'   [load_survey_list()] and [load_annotations()].
 #'
-#' @param conn A database connection passed to inline functions used to load
-#'   existing CWTs or annotations.
 #' @param proj One or more survey project codes. Must be one or more of:
 #'   `"ases"`, `"cceb"`, `"cdcee"`, `"cses"`, `"eb"`, `"eqls"`, `"ess"`,
 #'   `"evs"`, `"intune"`, `"issp"`, `"lits"`, `"nbb"`, `"neb"`, `"wvs"`.
 #'
-#' @return Invisibly returns a named list with two deduplicated data frames,
-#'   each containing `target_var` and `study_wave`:
+#' @param annotations Optional annotation data frame. If `NULL`, annotations are
+#'   loaded automatically using [load_annotations()] with `reshape = TRUE`.
+#'   The annotation table must contain at least `src_var`, `target_var`, and
+#'   `study_wave`.
+#'
+#' @return A data frame containing the generated CWT with the following columns:
 #' \describe{
-#'   \item{aligned_missing_rows}{Variables from the aligned CWT missing in the recoded CWT.}
-#'   \item{ann_missing_rows}{Variables from the annotation sheet missing in the recoded CWT.}
+#'   \item{study_wave}{Survey wave or dataset name.}
+#'   \item{var_name}{Source variable name in the original survey data.}
+#'   \item{var_label}{Variable label, where available.}
+#'   \item{value_n}{Number of observations for each value.}
+#'   \item{value}{Value label.}
+#'   \item{value_code}{Original value code.}
+#'   \item{target_var}{Target variable name from the annotation table.}
+#'   \item{target_value}{Empty target-value column to be completed during recoding.}
 #' }
 #'
 #' @details
-#' Composite keys (`var_name_study_wave`) are used for matching across waves.
-#' Missing-value codes (\code{"-999"}, \code{"-99"}, \code{"999"}, \code{"99"})
-#' are excluded from the annotation check, consistent with [build_cwt()].
-#' The recoded CWT is loaded via [bind_cwts()] with
-#' \code{indicator = c("controls", "swd", "tech", "trust")}.
+#' The function first loads the relevant survey datasets using
+#' [load_survey_list()]. It then loads or receives an annotation table and removes
+#' common missing-value codes from `src_var`: `"-999"`, `"-99"`, `"999"`, and
+#' `"99"`.
 #'
-#' @seealso [build_cwt()], [append_cwt()], [bind_cwts()]
+#' For each survey wave, the function keeps only variables listed in the
+#' annotation table, extracts labels and counts, and combines the results into a
+#' single CWT. Technical variables are collapsed using [collapse_tech_vars()].
+#'
+#' If source variables appear in the annotation table but are not found in the
+#' survey data, the function returns the CWT and raises a warning listing the
+#' missing variables.
+#'
+#' @seealso
+#' [load_survey_list()], [load_annotations()], [write_cwt()], [bind_cwts()],
+#' [append_cwt()]
+#'
 #' @family cwt
 #'
-#' @examplesIf Sys.getenv("ROOT_DIR") != ""
-#' con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-#' result <- check_cwt_recoded(conn = con, proj = "ess")
-#' result$aligned_missing_rows
-#' result$ann_missing_rows
+#' @examples
+#' \dontrun{
+#' conn <- set_db_connection()
+#'
+#' ess_cwt <- build_cwt(conn, "ess")
+#' dplyr::glimpse(ess_cwt)
+#'
+#' multi_cwt <- build_cwt(conn, c("ess", "evs"))
+#' dplyr::glimpse(multi_cwt)
+#' }
 #'
 #' @export
 build_cwt <- function(conn, proj, annotations = NULL) {

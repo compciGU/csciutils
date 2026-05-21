@@ -7,8 +7,8 @@
 append_cwt(conn, proj)
 }
 \arguments{
-\item{conn}{A database connection passed to inline functions used to load
-existing CWTs or annotations.}
+\item{conn}{A database connection. This is passed to helper functions such as
+[load_survey_list()] and [load_annotations()].}
 
 \item{proj}{One or more survey project codes. Must be one or more of:
 `"ases"`, `"cceb"`, `"cdcee"`, `"cses"`, `"eb"`, `"eqls"`, `"ess"`,
