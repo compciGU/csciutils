@@ -58,4 +58,3 @@ Other cwt:
 \code{\link{write_cwt}()}
 }
 \concept{cwt}
-\keyword{internal}

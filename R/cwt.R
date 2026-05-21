@@ -382,7 +382,7 @@ append_cwt <- function(conn, proj) {
 #' result$aligned_missing_rows
 #' result$ann_missing_rows
 #'
-#' @keywords internal
+#' @export
 build_cwt <- function(conn, proj, annotations = NULL) {
 
   MISSING_CODES <- c("-999", "-99", "999", "99")
