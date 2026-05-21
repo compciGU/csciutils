@@ -343,7 +343,7 @@ append_cwt <- function(conn, proj) {
 #' Build a crosswalk table from survey data and annotations
 #'
 #' @description
-#' Builds a crosswalk table (CWT) for one or more survey projects. The function
+#' Builds a crosswalk table (CWT) from a .stata file. The function
 #' loads the survey data, matches source variables from the annotation table to
 #' variables in the survey data, extracts value labels and observation counts,
 #' and returns a standardized CWT ready for recoding.

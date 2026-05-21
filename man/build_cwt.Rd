@@ -33,7 +33,7 @@ A data frame containing the generated CWT with the following columns:
 }
 }
 \description{
-Builds a crosswalk table (CWT) for one or more survey projects. The function
+Builds a crosswalk table (CWT) from a .stata file. The function
 loads the survey data, matches source variables from the annotation table to
 variables in the survey data, extracts value labels and observation counts,
 and returns a standardized CWT ready for recoding.
